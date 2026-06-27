@@ -1,0 +1,23 @@
+---
+- name: installing openwrt | Install missing package with opkg
+  community.openwrt.opkg:
+    name: "{{ cloudflared_facts_openwrt_package_name }}"
+    state: present
+    update_cache: true
+  register: cloudflared_result_openwrt_opkg_install
+  when:
+    - cloudflared_facts_version_mode == 'any'
+    - not cloudflared_facts_is_installed
+
+- name: installing openwrt | Install or refresh latest package with opkg
+  community.openwrt.command:
+    cmd: >-
+      opkg update &&
+      {{
+        'opkg install ' ~ cloudflared_facts_openwrt_package_name
+        if not cloudflared_facts_is_installed
+        else 'opkg upgrade ' ~ cloudflared_facts_openwrt_package_name
+      }}
+    uses_shell: true
+  register: cloudflared_result_openwrt_opkg_latest
+  when: cloudflared_facts_version_mode == 'latest'

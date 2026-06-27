@@ -1,0 +1,112 @@
+---
+- name: installing openwrt | Validate target distribution is OpenWrt
+  ansible.builtin.assert:
+    that:
+      - ansible_facts["os_family"] == "OpenWrt"
+      - ansible_facts.get("distribution", "") == "OpenWrt"
+    fail_msg: >-
+      Unsupported OpenWrt distribution for cloudflared installation:
+      os_family={{ ansible_facts['os_family'] | default('UNDEFINED') }},
+      distribution={{ ansible_facts['distribution'] | default('UNDEFINED') }}.
+
+- name: installing openwrt | Validate OpenWrt installation settings
+  ansible.builtin.assert:
+    that:
+      - cloudflared_openwrt_package_name is string
+      - cloudflared_openwrt_package_name | trim | length > 0
+    fail_msg: >-
+      OpenWrt installation settings are invalid.
+      Check the OpenWrt package name.
+
+- name: installing openwrt | Validate OpenWrt version mode
+  ansible.builtin.assert:
+    that:
+      - cloudflared_package_version in ['latest', 'any']
+    fail_msg: >-
+      OpenWrt only supports `latest` and `any` package versions because
+      OpenWrt package repositories do not provide a stable historical version
+      contract.
+
+- name: installing openwrt | Check for opkg availability
+  community.openwrt.command:
+    cmd: which opkg
+  register: cloudflared_result_openwrt_opkg_available
+  check_mode: false
+  changed_when: false
+  failed_when: false
+
+- name: installing openwrt | Check for apk availability
+  community.openwrt.command:
+    cmd: which apk
+  register: cloudflared_result_openwrt_apk_available
+  check_mode: false
+  changed_when: false
+  failed_when: false
+
+- name: installing openwrt | Assert package manager is found
+  ansible.builtin.assert:
+    fail_msg: "Could not find package manager: neither `apk` nor `opkg` is available."
+    that:
+      - cloudflared_result_openwrt_apk_available.rc | default(1) == 0
+        or cloudflared_result_openwrt_opkg_available.rc | default(1) == 0
+
+- name: installing openwrt | Check for package manager availability
+  vars:
+    has_apk: "{{ cloudflared_result_openwrt_apk_available.rc == 0 }}"
+    has_opkg: "{{ cloudflared_result_openwrt_opkg_available.rc == 0 }}"
+  ansible.builtin.set_fact:
+    cloudflared_facts_openwrt_package_manager: "{{ 'apk' if has_apk else ('opkg' if has_opkg else None) }}"
+  check_mode: false
+
+- name: installing openwrt | Validate detected package manager
+  ansible.builtin.assert:
+    that:
+      - cloudflared_facts_openwrt_package_manager | default('') in ['opkg', 'apk']
+    fail_msg: >-
+      Unsupported OpenWrt package manager for cloudflared installation:
+      {{ cloudflared_facts_openwrt_package_manager | default('UNDEFINED') }}.
+
+- name: installing openwrt | Facted selected package manager and package name
+  ansible.builtin.set_fact:
+    cloudflared_tasks_openwrt_package_manager: "{{ cloudflared_facts_openwrt_package_manager }}"
+    cloudflared_facts_openwrt_package_name: "{{ cloudflared_openwrt_package_name }}"
+
+- name: installing openwrt | Gather installed package facts
+  community.openwrt.package_facts:
+
+- name: installing openwrt | Facted installed package details
+  vars:
+    cloudflared_facts_openwrt_package_info: >-
+      {{
+        (
+          ansible_facts.get('packages', {})
+          .get(cloudflared_facts_openwrt_package_name, [])
+          | first
+        )
+        | default({})
+      }}
+  ansible.builtin.set_fact:
+    cloudflared_facts_is_installed: >-
+      {{
+        cloudflared_facts_openwrt_package_info != {}
+      }}
+    cloudflared_facts_installed_version: >-
+      {{
+        cloudflared_facts_openwrt_package_info.get('version', '')
+      }}
+    cloudflared_facts_version_mode: >-
+      {{ cloudflared_package_version }}
+
+- name: installing openwrt | Facted OpenWrt installation behavior
+  ansible.builtin.set_fact:
+    cloudflared_facts_openwrt_install_required: >-
+      {{
+        (cloudflared_facts_version_mode == 'latest') or
+        (cloudflared_facts_version_mode == 'any' and
+         not cloudflared_facts_is_installed)
+      }}
+
+- name: installing openwrt | Install cloudflared using selected source
+  ansible.builtin.include_tasks: >-
+    installing_openwrt_{{ cloudflared_tasks_openwrt_package_manager }}.yml
+  when: cloudflared_facts_openwrt_install_required

@@ -5,6 +5,31 @@
     cloudflared_facts_is_windows: "{{ ansible_connection in ['winrm', 'psrp'] }}"
   when: ansible_facts["os_family"] is not defined
 
+- name: setupping | Probe OpenWrt
+  ansible.builtin.raw: |
+    test -f /etc/openwrt_release
+  register: cloudflared_result_openwrt_probe
+  changed_when: false
+  failed_when: false
+  when:
+    - ansible_facts["os_family"] is not defined
+    - not (cloudflared_facts_is_windows | default(false))
+
+- name: setupping | Facted OpenWrt probe results
+  ansible.builtin.set_fact:
+    cloudflared_facts_is_openwrt: "{{ cloudflared_result_openwrt_probe.rc == 0 }}"
+  when:
+    - ansible_facts["os_family"] is not defined
+    - not (cloudflared_facts_is_windows | default(false))
+    - cloudflared_result_openwrt_probe is defined
+
+- name: setupping | include tasks for OpenWrt systems
+  include_tasks: setupping_openwrt.yml
+  when:
+    - ansible_facts["os_family"] is not defined
+    - not (cloudflared_facts_is_windows | default(false))
+    - cloudflared_result_openwrt_probe.rc == 0
+
 - name: setupping | include tasks for Windows systems
   include_tasks: setupping_unix.yml
   when:

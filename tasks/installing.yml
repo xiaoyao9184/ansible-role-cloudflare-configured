@@ -1,5 +1,9 @@
 ---
 # OS-specific installation tasks should be included from this stage file.
+- name: installing | Run OpenWrt installation tasks
+  ansible.builtin.include_tasks: installing_openwrt.yml
+  when: ansible_facts["os_family"] == "OpenWrt"
+
 - name: installing | Run Debian installation tasks
   ansible.builtin.include_tasks: installing_debian.yml
   when: ansible_facts["os_family"] == "Debian"

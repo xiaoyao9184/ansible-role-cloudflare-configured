@@ -117,6 +117,11 @@ cloudflared_windows_binary_candidates:
   - C:\Program Files (x86)\cloudflared\cloudflared.exe
 cloudflared_windows_github_binary_path: C:\Program Files\cloudflared\cloudflared.exe
 #
+# openwrt package name
+#
+# set to `luci-app-cloudflared` if that package should be managed instead
+cloudflared_openwrt_package_name: cloudflared
+#
 # 2. Configuration variables
 #
 # tunnel create settings

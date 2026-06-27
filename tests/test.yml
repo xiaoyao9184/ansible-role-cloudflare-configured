@@ -2,4 +2,4 @@
 - hosts: localhost
   remote_user: root
   roles:
-    - your_name.cloudflare_configured
+    - codex_with_openspec.cloudflare_configured

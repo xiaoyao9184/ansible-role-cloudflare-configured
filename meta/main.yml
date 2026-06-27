@@ -1,7 +1,7 @@
 galaxy_info:
   # The automatically generated name is unstable when the field is empty.
   role_name: cloudflare_configured
-  author: your_name
+  author: codex_with_openspec
   description: your role description
   company: your company (optional)
 

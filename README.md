@@ -194,7 +194,7 @@ Before using this skeleton as a real role, update:
 - `meta/main.yml`: set `author`, `role_name`, `description`, `license`, and
   supported platforms.
 - Molecule `converge.yml` files: replace
-  `your_name.cloudflare_configured` with the final role name.
+  `codex_with_openspec.cloudflare_configured` with the final role name.
 - `defaults/main.yml`, `tasks/main.yml`, `handlers/main.yml`, and
   `vars/main.yml`: add the actual role behavior.
 - `tests/`: add inventory and integration tests that match the role.

@@ -3,4 +3,4 @@
   hosts: all
   gather_facts: false
   roles:
-    - role: your_name.cloudflare_configured
+    - role: codex_with_openspec.cloudflare_configured

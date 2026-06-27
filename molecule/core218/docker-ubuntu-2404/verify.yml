@@ -1,0 +1,18 @@
+---
+# This is an example playbook to execute Ansible tests.
+
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check package version
+      ansible.builtin.command:
+        cmd: cloudflared --version
+      register: cloudflared_check
+
+    - name: Assert package version
+      ansible.builtin.assert:
+        that:
+          - cloudflared_check.rc == 0
+          - cloudflared_check.stdout is defined
+          - cloudflared_check.stdout != ''

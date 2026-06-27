@@ -1,0 +1,33 @@
+---
+- name: Converge | github source
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_debian_source: github
+  tasks:
+    - name: github source | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_debian_install_required == true
+          - cloudflared_facts_is_installed == true
+          - cloudflared_facts_installed_version != ''
+          - cloudflared_facts_version_mode == 'latest'
+          - cloudflared_facts_debian_install_required == true
+          - cloudflared_tasks_debian_source == 'github'
+          - cloudflared_tasks_debian_key is not defined
+          - cloudflared_tasks_debian_repository is not defined
+          - cloudflared_facts_debian_repository_signed_by is not defined
+          - cloudflared_facts_debian_package_spec is not defined
+          - cloudflared_facts_debian_package_state is not defined
+          - cloudflared_result_debian_key is not defined
+          - cloudflared_result_debian_key_url is not defined
+          - cloudflared_result_debian_list_repository is not defined
+          - cloudflared_result_debian_sources_repository_1 is not defined
+          - cloudflared_result_debian_sources_repository_2 is not defined
+          - cloudflared_facts_github_release_tag == 'latest'
+          - cloudflared_facts_github_release_asset == 'cloudflared-linux-amd64.deb'
+          - cloudflared_facts_github_release_url == 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb'
+          - cloudflared_result_github_download_dir is changed
+          - cloudflared_result_github_package_download is changed

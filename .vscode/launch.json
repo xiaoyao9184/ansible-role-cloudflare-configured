@@ -414,6 +414,7 @@
                 "docker-debian-10",
                 "docker-ubuntu-2404",
                 "docker-ubuntu-2004",
+                "docker-fedora-43",
             ]
         }
     ]

@@ -283,6 +283,7 @@
                 "default-macos-15",
                 "default-windows-2025",
                 "docker-openwrt-24",
+                "docker-openwrt-25",
             ]
         }
     ]

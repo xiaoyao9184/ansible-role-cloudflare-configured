@@ -1,0 +1,8 @@
+---
+- name: Fix sudo PAM account management error
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Change permissions of /etc/shadow
+      ansible.builtin.command:
+        cmd: chmod 0400 /etc/shadow

@@ -19,6 +19,12 @@ cloudflared_package_version: latest
 #
 # 1. Installation variables
 #
+# installation mode
+#
+# `native` use OS-native package or binary installation paths
+# `docker` use a Docker container delivery path
+cloudflared_installation_mode: native
+#
 # base url for github api
 cloudflared_github_base_url: https://github.com
 # repository name
@@ -121,6 +127,13 @@ cloudflared_windows_github_binary_path: C:\Program Files\cloudflared\cloudflared
 #
 # set to `luci-app-cloudflared` if that package should be managed instead
 cloudflared_openwrt_package_name: cloudflared
+#
+# docker installation settings
+#
+cloudflared_docker_host: unix:///var/run/docker.sock
+cloudflared_docker_image_repository: cloudflare/cloudflared
+cloudflared_docker_container_name: cloudflared
+cloudflared_docker_container_command: []
 #
 # 2. Configuration variables
 #

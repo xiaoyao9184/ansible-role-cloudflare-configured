@@ -1,0 +1,98 @@
+---
+- name: installing docker | Manage Docker image delivery
+  module_defaults:
+    group/community.docker.docker:
+      docker_host: "{{ cloudflared_docker_host }}"
+  block:
+    - name: installing docker | Validate Docker installation settings
+      ansible.builtin.assert:
+        that:
+          - cloudflared_installation_mode == "docker"
+          - cloudflared_docker_host is string
+          - cloudflared_docker_host | length > 0
+          - cloudflared_docker_image_repository is string
+          - cloudflared_docker_image_repository | length > 0
+          - cloudflared_package_version in ["latest"] or
+            (cloudflared_package_version is match('^[0-9]+(\\.[0-9]+){1,3}$'))
+        fail_msg: >-
+          Docker installation settings are invalid.
+          Check installation mode, docker host, image repository,
+          and package version.
+
+    - name: installing docker | Check Docker daemon availability
+      community.docker.docker_host_info:
+      register: cloudflared_result_docker_host_info
+      changed_when: false
+
+    - name: installing docker | Facted target image details
+      ansible.builtin.set_fact:
+        cloudflared_facts_version_mode: >-
+          {{
+            "latest"
+            if cloudflared_package_version == "latest"
+            else "specific"
+          }}
+        cloudflared_facts_docker_image_tag: >-
+          {{
+            "latest"
+            if cloudflared_package_version == "latest"
+            else cloudflared_package_version
+          }}
+        cloudflared_facts_docker_image_ref: >-
+          {{
+            cloudflared_docker_image_repository ~ ":" ~
+            (
+              "latest"
+              if cloudflared_package_version == "latest"
+              else cloudflared_package_version
+            )
+          }}
+
+    - name: installing docker | Inspect current cloudflared image
+      community.docker.docker_image_info:
+        name: "{{ cloudflared_facts_docker_image_ref }}"
+      register: cloudflared_result_docker_image_info
+      changed_when: false
+
+    - name: installing docker | Facted installed image details
+      vars:
+        _installed_version: >-
+          {{
+            (
+              cloudflared_result_docker_image_info.images
+              | default([])
+              | map(attribute='RepoTags')
+              | reject('equalto', none)
+              | list
+              | flatten
+              | map('regex_replace', '^' ~ cloudflared_docker_image_repository ~ ':', '')
+            )
+            if cloudflared_result_docker_image_info.images | default([]) | length > 0
+            else ""
+          }}
+      ansible.builtin.set_fact:
+        cloudflared_facts_is_installed: >-
+          {{ cloudflared_result_docker_image_info.images | default([]) | length > 0 }}
+        cloudflared_facts_installed_version: "{{ _installed_version }}"
+        cloudflared_facts_docker_install_required: >-
+          {{
+            (cloudflared_facts_version_mode == "latest") or
+            (
+              cloudflared_facts_version_mode == "specific" and
+              cloudflared_package_version not in _installed_version
+            )
+          }}
+        cloudflared_facts_docker_image_exists: >-
+          {{ cloudflared_result_docker_image_info.images | default([]) | length > 0 }}
+
+    - name: installing docker | Pull target cloudflared image
+      community.docker.docker_image_pull:
+        name: "{{ cloudflared_docker_image_repository }}"
+        tag: "{{ cloudflared_facts_docker_image_tag }}"
+        pull: >-
+          {{
+            "always"
+            if cloudflared_facts_version_mode == "latest"
+            else "not_present"
+          }}
+      register: cloudflared_result_docker_image_pull

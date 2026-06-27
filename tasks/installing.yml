@@ -1,23 +1,35 @@
 ---
 # OS-specific installation tasks should be included from this stage file.
+- name: installing | Run Docker installation tasks
+  ansible.builtin.include_tasks: installing_docker.yml
+  when: cloudflared_installation_mode == "docker"
+
 - name: installing | Run OpenWrt installation tasks
   ansible.builtin.include_tasks: installing_openwrt.yml
-  when: ansible_facts["os_family"] == "OpenWrt"
+  when:
+    - cloudflared_installation_mode != "docker"
+    - ansible_facts["os_family"] == "OpenWrt"
 
 - name: installing | Run Debian installation tasks
   ansible.builtin.include_tasks: installing_debian.yml
-  when: ansible_facts["os_family"] == "Debian"
+  when:
+    - cloudflared_installation_mode != "docker"
+    - ansible_facts["os_family"] == "Debian"
 
 - name: installing | Run Red Hat compatible installation tasks for RedHat and Rocky families
   ansible.builtin.include_tasks: installing_redhat.yml
-  when: >-
-    ansible_facts["os_family"] == "RedHat" or
-    ansible_facts["os_family"] == "Rocky"
+  when:
+    - cloudflared_installation_mode != "docker"
+    - ansible_facts["os_family"] in ["RedHat", "Rocky"]
 
 - name: installing | Run macOS installation tasks
   ansible.builtin.include_tasks: installing_macos.yml
-  when: ansible_facts["os_family"] == "Darwin"
+  when:
+    - cloudflared_installation_mode != "docker"
+    - ansible_facts["os_family"] == "Darwin"
 
 - name: installing | Run Windows installation tasks
   ansible.builtin.include_tasks: installing_windows.yml
-  when: ansible_facts["os_family"] == "Windows"
+  when:
+    - cloudflared_installation_mode != "docker"
+    - ansible_facts["os_family"] == "Windows"

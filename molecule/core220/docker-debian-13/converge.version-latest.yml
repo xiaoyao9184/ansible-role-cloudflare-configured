@@ -1,6 +1,6 @@
 ---
 - name: Converge | latest version
-  hosts: all
+  hosts: debian13
   gather_facts: false
   roles:
     - codex_with_openspec.cloudflare_configured

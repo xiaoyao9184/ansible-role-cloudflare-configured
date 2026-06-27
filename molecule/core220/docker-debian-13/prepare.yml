@@ -1,0 +1,27 @@
+---
+- name: Prepare | localhost
+  hosts: localhost
+  gather_facts: true
+  tasks:
+    - when: _cert_env != ''
+      vars:
+        _cloudflared_account_cert_file: >-
+          {{
+            lookup('env', 'HOME')
+            | default('/home/nonroot', true)
+            ~
+            '/.cloudflared/cert.pem'
+          }}
+        _cert_env: "{{ lookup('env', 'CLOUDFLARE_TUNNEL_CERT') | default('', true) }}"
+      block:
+        - name: Create .cloudflared directory
+          ansible.builtin.file:
+            path: "{{ _cloudflared_account_cert_file | dirname }}"
+            state: directory
+            mode: '0700'
+
+        - name: Write cert.pem from CLOUDFLARE_TUNNEL_CERT environment variable
+          ansible.builtin.copy:
+            dest: "{{ _cloudflared_account_cert_file }}"
+            content: "{{ _cert_env }}"
+            mode: '0600'

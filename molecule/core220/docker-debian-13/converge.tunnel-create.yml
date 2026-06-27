@@ -1,0 +1,107 @@
+---
+- name: Converge | tunnel create
+  hosts: same
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_package_version: any
+
+        # cloudflared_controller_binary_path: >-
+        #   {{
+        #     lookup('env', 'HOME')
+        #     | default('/home/nonroot', true)
+        #     ~
+        #     '/.cloudflared/cloudflared'
+        #   }}
+
+        cloudflared_account_cert_file: >-
+          {{
+            lookup('env', 'HOME')
+            | default('/home/nonroot', true)
+            ~
+            '/.cloudflared/cert.pem'
+          }}
+        cloudflared_tunnel_name: >-
+          {{
+            lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+            | default('ansible-role-cloudflare-configured-test-tunnel', true)
+          }}
+        cloudflared_tunnel_credentials_file: >-
+          {{
+            lookup('env', 'HOME')
+            | default('/home/nonroot', true)
+            ~ '/.cloudflared/'
+            ~ lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+              | default('ansible-role-cloudflare-configured-test-tunnel', true)
+            ~ '.json'
+          }}
+  tasks:
+    - name: tunnel create | inspect tunnel credentials file
+      ansible.builtin.stat:
+        path: >-
+          {{
+            lookup('env', 'HOME')
+            | default('/home/nonroot', true)
+            ~ '/.cloudflared/'
+            ~ lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+              | default('ansible-role-cloudflare-configured-test-tunnel', true)
+            ~ '.json'
+          }}
+      delegate_to: localhost
+      register: cloudflared_result_credentials_file_stat
+      run_once: true
+
+    - name: tunnel create | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_result_credentials_file_stat.stat.exists
+          # configuring tunnel
+          - >-
+            cloudflared_facts_account_cert_file ==
+            (
+              lookup('env', 'HOME') | default('/home/nonroot', true)
+            ) ~ '/.cloudflared/cert.pem'
+
+          - >-
+            cloudflared_facts_tunnel_name ==
+            (
+              lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+              | default('ansible-role-cloudflare-configured-test-tunnel', true)
+            )
+          - >-
+            cloudflared_facts_tunnel_credentials_file ==
+            (
+              lookup('env', 'HOME')
+              | default('/home/nonroot', true)
+              ~ '/.cloudflared/'
+              ~ lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+                | default('ansible-role-cloudflare-configured-test-tunnel', true)
+              ~ '.json'
+            )
+          - hostvars['localhost'].cloudflared_facts_unique_tunnels[0].account_cert_file is defined
+          - hostvars['localhost'].cloudflared_facts_unique_tunnels[0].tunnel_name is defined
+          - hostvars['localhost'].cloudflared_facts_unique_tunnels[0].tunnel_credentials_file is defined
+          # configuring tunnel install
+          - cloudflared_result_tunnel_controller_version is not skipped
+          - cloudflared_result_tunnel_controller_download_dir is not skipped
+          - hostvars['localhost'].cloudflared_facts_tunnel_controller_binary_path == '~/.cloudflared/cloudflared'
+          - hostvars['localhost'].cloudflared_facts_tunnel_controller_release_url == 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64'
+          - hostvars['localhost'].cloudflared_facts_tunnel_controller_download_filename == 'cloudflared'
+          - hostvars['localhost'].cloudflared_facts_tunnel_controller_extracted_binary_path is defined
+          # configuring tunnel create
+          - cloudflared_item_result_tunnel_account_cert_stat is defined
+          - cloudflared_item_result_tunnel_list_command is not skipped
+          - hostvars['localhost'].cloudflared_item_facts_tunnel_exists == false
+          # command tunnel token
+          - hostvars['localhost'].cloudflared_item_facts_tunnel_token_argv is not defined
+          - cloudflared_item_result_tunnel_token_command is skipped
+          - cloudflared_item_result_tunnel_token_credentials_file is skipped
+          - hostvars['localhost'].cloudflared_item_facts_tunnel_token_result is not defined
+          # command tunnel create
+          - hostvars['localhost'].cloudflared_item_facts_tunnel_create_argv is defined
+          - cloudflared_item_result_tunnel_create_command is not skipped
+          - hostvars['localhost'].cloudflared_item_facts_tunnel_create_result is defined
+
+          - hostvars['localhost'].cloudflared_facts_tunnel_results | length == 1
+      run_once: true

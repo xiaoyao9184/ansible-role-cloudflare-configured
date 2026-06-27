@@ -1,0 +1,46 @@
+---
+- name: controlling service windows | Resolve cloudflared binary path
+  ansible.windows.win_command:
+    argv:
+      - where.exe
+      - cloudflared
+  register: cloudflared_result_service_binary_path
+  changed_when: false
+
+- name: controlling service windows | Facted native binary path
+  ansible.builtin.set_fact:
+    cloudflared_facts_service_binary_path: >-
+      {{ cloudflared_result_service_binary_path.stdout_lines | first }}
+
+- name: controlling service windows | Facted service command line
+  ansible.builtin.set_fact:
+    cloudflared_facts_service_windows_service_path: >-
+      {{
+        ([cloudflared_facts_service_binary_path] + cloudflared_facts_service_command_args)
+        | map('regex_replace', '^(.*)$', '"\g<0>"')
+        | join(' ')
+      }}
+
+- name: controlling service windows | Ensure cloudflared service exists
+  ansible.windows.win_service:
+    name: "{{ cloudflared_service_name }}"
+    path: "{{ cloudflared_facts_service_windows_service_path }}"
+    display_name: Cloudflared agent
+    description: Cloudflared agent managed by ansible-role-cloudflare-configured
+    username: LocalSystem
+    start_mode: "{{ 'auto' if cloudflared_service_enabled else 'disabled' }}"
+    state: >-
+      {{
+        'started'
+        if cloudflared_service_enabled and cloudflared_service_state == 'started'
+        else 'restarted'
+        if cloudflared_service_enabled and cloudflared_service_state in ['restarted', 'reloaded']
+        else 'stopped'
+      }}
+    failure_actions:
+      - type: restart
+        delay_ms: 20000
+      - type: none
+    failure_reset_period_sec: 86400
+    failure_actions_on_non_crash_failure: true
+  register: cloudflared_result_service_windows_service_install

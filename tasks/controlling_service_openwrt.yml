@@ -1,0 +1,80 @@
+---
+- name: controlling service openwrt | Derive UCI config
+  ansible.builtin.set_fact:
+    cloudflared_facts_uci_config: >-
+      {{
+        [
+          {
+            'key': 'enabled',
+            'value': '1'
+          },
+          {
+            'key': 'edge_bind_address',
+            'value': cloudflared_tunnel_run_parameter_args['edge-bind-address']
+          },
+          {
+            'key': 'edge_ip_version',
+            'value': cloudflared_tunnel_run_parameter_args['edge-ip-version']
+          },
+          {
+            'key': 'grace_period',
+            'value': cloudflared_tunnel_run_parameter_args['grace-period']
+          },
+          {
+            'key': 'protocol',
+            'value': cloudflared_tunnel_run_parameter_args['protocol']
+          },
+          {
+            'key': 'region',
+            'value': cloudflared_tunnel_run_parameter_args['region']
+          },
+          {
+            'key': 'retries',
+            'value': cloudflared_tunnel_run_parameter_args['retries']
+          },
+          {
+            'key': 'tag',
+            'value': cloudflared_tunnel_run_parameter_args['tag']
+          },
+          {
+            'key': 'metrics',
+            'value': cloudflared_tunnel_run_parameter_args['metrics']
+          },
+          {
+            'key': 'loglevel',
+            'value': cloudflared_tunnel_run_parameter_args['loglevel']
+          },
+          {
+            'key': 'logfile',
+            'value': cloudflared_tunnel_run_parameter_args['logfile']
+          },
+          {
+            'key': 'token',
+            'value': cloudflared_tunnel_run_parameter_args['token']
+          },
+          {
+            'key': 'config',
+            'value': cloudflared_tunnel_run_parameter_args['config']
+          },
+          {
+            'key': 'origincert',
+            'value': cloudflared_tunnel_run_parameter_args['origincert']
+          },
+        ]
+        | rejectattr('value', 'equalto', '')
+        | items2dict(key_name='key', value_name='value')
+      }}
+
+- name: controlling service openwrt | Set UCI config
+  uci:
+    command: set
+    key: cloudflared.config
+    replace: true
+    value: "{{ cloudflared_facts_uci_config }}"
+    autocommit: true
+
+- name: controlling service openwrt | Enforce service enablement state
+  community.openwrt.service:
+    name: "{{ cloudflared_service_name }}"
+    enabled: "{{ cloudflared_service_enabled }}"
+    state: "{{ cloudflared_service_state }}"

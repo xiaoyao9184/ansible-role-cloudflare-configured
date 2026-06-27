@@ -1,2 +1,5 @@
 ---
-# OS-specific control tasks should be included from this stage file.
+# The controlling stage owns runtime-unit registration and state management.
+- name: controlling | Run service workflow
+  ansible.builtin.include_tasks: controlling_service.yml
+  when: cloudflared_service_name | trim | length > 0

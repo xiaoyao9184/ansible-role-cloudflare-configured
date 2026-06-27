@@ -111,7 +111,21 @@
       - cloudflared_service_name is string
       - cloudflared_service_enabled is boolean
       - cloudflared_service_state in ["started", "stopped", "restarted", "reloaded"]
+      - cloudflared_linux_service_unit_path is string
+      - cloudflared_linux_service_unit_path | trim | length > 0
+      - cloudflared_macos_launchd_label is string
+      - cloudflared_macos_launchd_label | trim | length > 0
+      - cloudflared_macos_launchd_plist_path is string
+      - cloudflared_macos_launchd_plist_path | trim | length > 0
+      - cloudflared_tunnel_run_parameter_args is mapping
+      - cloudflared_tunnel_cli_extra_args is sequence
+      - cloudflared_tunnel_cli_extra_args is not string
+      - cloudflared_tunnel_cli_extra_args | select('string') | list | length == cloudflared_tunnel_cli_extra_args | length
     fail_msg: >-
       `cloudflared_service_name` must be a string,
       `cloudflared_service_enabled` must be a boolean,
       `cloudflared_service_state` must be one of: `started`, `stopped`, `restarted`, `reloaded`.
+      `cloudflared_linux_service_unit_path` must be a non-empty string,
+      `cloudflared_macos_launchd_label` must be a non-empty string,
+      `cloudflared_macos_launchd_plist_path` must be a non-empty string,
+      `cloudflared_tunnel_cli_extra_args` must be a list of strings.

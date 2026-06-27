@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>{{ cloudflared_macos_launchd_label }}</string>
+  <key>ProgramArguments</key>
+  <array>
+{% for arg in [cloudflared_facts_service_binary_path] + cloudflared_facts_service_command_args %}
+    <string>{{ arg }}</string>
+{% endfor %}
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <{{ 'true' if cloudflared_service_enabled else 'false' }}/>
+</dict>
+</plist>

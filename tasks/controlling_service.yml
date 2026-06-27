@@ -1,0 +1,105 @@
+---
+# Build the canonical cloudflared runtime command once for every control path.
+- name: controlling service | Initialize shared run parameter arguments
+  ansible.builtin.set_fact:
+    cloudflared_facts_service_tunnel_shared_options: []
+    cloudflared_facts_service_tunnel_run_options: []
+
+- name: controlling service | Append scalar shared run parameters
+  ansible.builtin.set_fact:
+    cloudflared_facts_service_tunnel_shared_options: >-
+      {{
+        cloudflared_facts_service_tunnel_shared_options
+        + [
+            '--' ~ item.key,
+            item.value | string
+          ]
+      }}
+  loop: "{{ cloudflared_tunnel_run_parameter_args | dict2items }}"
+  when:
+    - item.key not in ['no-autoupdate', 'dns-resolver-addrs', 'token', 'token-file']
+    - item.value is not none
+    - not (item.value is string and item.value | length == 0)
+    - not (item.value is sequence and item.value is not string and item.value | length == 0)
+
+- name: controlling service | Append boolean shared run parameter flags
+  ansible.builtin.set_fact:
+    cloudflared_facts_service_tunnel_shared_options: >-
+      {{
+        cloudflared_facts_service_tunnel_shared_options
+        + ['--' ~ item.key]
+      }}
+  loop: "{{ cloudflared_tunnel_run_parameter_args | dict2items }}"
+  when:
+    - item.key in ['no-autoupdate']
+    - item.value | bool
+
+- name: controlling service | Append repeated DNS resolver run parameters
+  ansible.builtin.set_fact:
+    cloudflared_facts_service_tunnel_shared_options: >-
+      {{
+        cloudflared_facts_service_tunnel_shared_options
+        + ['--dns-resolver-addrs', item | string]
+      }}
+  loop: "{{ cloudflared_tunnel_run_parameter_args['dns-resolver-addrs'] | default([]) }}"
+  when:
+    - cloudflared_tunnel_run_parameter_args['dns-resolver-addrs'] is defined
+    - cloudflared_tunnel_run_parameter_args['dns-resolver-addrs'] is sequence
+    - cloudflared_tunnel_run_parameter_args['dns-resolver-addrs'] is not string
+  loop_control:
+    label: "{{ item }}"
+
+- name: controlling service | Append token run parameter arguments
+  ansible.builtin.set_fact:
+    cloudflared_facts_service_tunnel_run_options: >-
+      {{
+        cloudflared_facts_service_tunnel_run_options
+        + [
+            '--' ~ item.key,
+            item.value | string
+          ]
+      }}
+  loop: "{{ cloudflared_tunnel_run_parameter_args | dict2items }}"
+  when:
+    - item.key in ['token', 'token-file']
+    - item.value is not none
+    - not (item.value is string and item.value | length == 0)
+    - not (item.value is sequence and item.value is not string and item.value | length == 0)
+
+- name: controlling service | Facted managed CLI tail
+  ansible.builtin.set_fact:
+    cloudflared_facts_service_tunnel_cli_tail: >-
+      {{
+        cloudflared_tunnel_cli_extra_args
+        if cloudflared_tunnel_cli_extra_args | length > 0
+        else []
+      }}
+
+- name: controlling service | Facted managed runtime command arguments
+  ansible.builtin.set_fact:
+    cloudflared_facts_service_command_args: >-
+      {{
+        ['tunnel']
+        + cloudflared_facts_service_tunnel_shared_options
+        + ['run']
+        + cloudflared_facts_service_tunnel_run_options
+        + cloudflared_facts_service_tunnel_cli_tail
+      }}
+
+- name: controlling service | Derive control host type
+  ansible.builtin.set_fact:
+    cloudflared_facts_service_host_type: >-
+      {{
+        'docker'
+        if cloudflared_installation_mode == 'docker'
+        else 'windows'
+        if ansible_facts["os_family"] == "Windows"
+        else 'openwrt'
+        if ansible_facts["os_family"] == "OpenWrt"
+        else 'macos'
+        if ansible_facts["os_family"] == "Darwin"
+        else 'linux'
+      }}
+
+- name: controlling service | Route by runtime unit type
+  ansible.builtin.include_tasks: "controlling_service_{{ cloudflared_facts_service_host_type }}.yml"

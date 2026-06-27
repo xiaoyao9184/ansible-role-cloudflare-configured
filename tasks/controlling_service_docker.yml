@@ -1,0 +1,36 @@
+---
+- name: controlling service docker | Manage runtime container
+  module_defaults:
+    group/community.docker.docker:
+      docker_host: "{{ cloudflared_docker_host }}"
+  block:
+    - name: controlling service docker | Derive target image reference
+      ansible.builtin.set_fact:
+        cloudflared_facts_docker_image_tag: >-
+          {{
+            "latest"
+            if cloudflared_package_version == "latest"
+            else cloudflared_package_version
+          }}
+        cloudflared_facts_docker_image_ref: >-
+          {{
+            cloudflared_docker_image_repository ~ ":" ~
+            (
+              "latest"
+              if cloudflared_package_version == "latest"
+              else cloudflared_package_version
+            )
+          }}
+
+    - name: controlling service docker | Create or update cloudflared container
+      community.docker.docker_container:
+        name: "{{ cloudflared_docker_container_name | default(cloudflared_service_name) }}"
+        image: "{{ cloudflared_facts_docker_image_ref }}"
+        command: "{{ cloudflared_facts_service_command_args | join(' ') }}"
+        state: "{{ 'stopped' if cloudflared_service_state == 'stopped' else 'started' }}"
+        restart: "{{ cloudflared_service_state in ['restarted', 'reloaded'] }}"
+        restart_policy: "{{ 'unless-stopped' if cloudflared_service_enabled else 'no' }}"
+        volumes:
+          - "{{ cloudflared_config_file_target_path }}:{{ cloudflared_config_file_target_path }}:ro"
+          - "{{ cloudflared_credentials_file_target_path }}:{{ cloudflared_credentials_file_target_path }}:ro"
+      register: cloudflared_result_service_docker_container

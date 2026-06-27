@@ -202,3 +202,34 @@ cloudflared_service_enabled: true
 # `restarted` restarts the runtime unit
 # `reloaded` reloads the runtime unit when supported
 cloudflared_service_state: started
+# unit file path for native systemd-based hosts
+cloudflared_linux_service_unit_path: "/etc/systemd/system/{{ cloudflared_service_name }}.service"
+# launchd label and plist path for macOS hosts
+cloudflared_macos_launchd_label: com.cloudflare.{{ cloudflared_service_name }}
+cloudflared_macos_launchd_plist_path: "/Library/LaunchDaemons/{{ cloudflared_macos_launchd_label }}.plist"
+# shared cloudflared tunnel command options
+# this object is a dictionary whose allowed keys are fixed to the official
+# Cloudflare tunnel command options names. Unused values ​​are left blank instead of being deleted.
+cloudflared_tunnel_run_parameter_args:
+  autoupdate-freq: ""
+  config: "{{ cloudflared_config_file_target_path }}"
+  dns-resolver-addrs: []
+  edge-bind-address: ""
+  edge-ip-version: ""
+  grace-period: ""
+  logfile: ""
+  loglevel: ""
+  metrics: ""
+  no-autoupdate: false
+  origincert: ""
+  pidfile: ""
+  post-quantum: ""
+  protocol: ""
+  region: ""
+  retries: ""
+  tag: ""
+  token: ""
+  token-file: ""
+# additional CLI args managed by the controlling stage
+# when empty, the role will default to a minimal `run` tail
+cloudflared_tunnel_cli_extra_args: []

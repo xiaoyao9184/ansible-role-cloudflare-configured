@@ -1,0 +1,13 @@
+[Unit]
+Description=cloudflared tunnel runtime managed by ansible-role-cloudflare-configured
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{ ([cloudflared_facts_service_binary_path] + cloudflared_facts_service_command_args) | join(' ') }}
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,28 @@
+---
+- name: controlling service macos | Resolve cloudflared binary path
+  ansible.builtin.command:
+    argv:
+      - which
+      - cloudflared
+  register: cloudflared_result_service_binary_path
+  changed_when: false
+  failed_when: false
+
+- name: controlling service macos | Facted native binary path
+  ansible.builtin.set_fact:
+    cloudflared_facts_service_binary_path: "{{ cloudflared_result_service_binary_path.stdout }}"
+
+- name: controlling service macos | Install cloudflared launchd plist
+  become: true
+  ansible.builtin.template:
+    src: cloudflared.launchd.plist.j2
+    dest: "{{ cloudflared_macos_launchd_plist_path }}"
+    mode: "0644"
+  register: cloudflared_result_service_macos_plist
+
+- name: controlling service macos | Ensure cloudflared service is runnings
+  become: true
+  community.general.launchd:
+    name: "{{ cloudflared_macos_launchd_label }}"
+    enabled: "{{ cloudflared_service_enabled }}"
+    state: "{{ cloudflared_service_state }}"

@@ -413,6 +413,7 @@
                 "default-macos-latest",
                 "default-macos-26",
                 "default-macos-14",
+                "docker-debian-13",
             ]
         }
     ]

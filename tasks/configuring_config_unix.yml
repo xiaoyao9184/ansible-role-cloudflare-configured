@@ -1,0 +1,38 @@
+---
+- name: configuring config unix | Ensure config file parent directory exists
+  become: "{{ cloudflared_config_file_become }}"
+  ansible.builtin.file:
+    path: "{{ cloudflared_config_file_target_path | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: configuring config unix | Copy config file
+  become: "{{ cloudflared_config_file_become }}"
+  ansible.builtin.copy:
+    src: "{{ cloudflared_config_file_source_copy_file }}"
+    dest: "{{ cloudflared_config_file_target_path }}"
+    mode: "0644"
+  register: cloudflared_result_config_file_copy
+  when: cloudflared_config_file_source_mode == "copy"
+
+- name: configuring config unix | Render config file from template
+  become: "{{ cloudflared_config_file_become }}"
+  ansible.builtin.template:
+    src: "{{ cloudflared_config_file_source_template_file }}"
+    dest: "{{ cloudflared_config_file_target_path }}"
+    mode: "0644"
+  register: cloudflared_result_config_file_template
+  when: cloudflared_config_file_source_mode == "template"
+
+- name: configuring config unix | Write config file from vars mapping
+  become: "{{ cloudflared_config_file_become }}"
+  ansible.builtin.copy:
+    dest: "{{ cloudflared_config_file_target_path }}"
+    content: >-
+      {{
+        cloudflared_config_file_source_vars_content
+        | to_nice_yaml(indent=2, sort_keys=false)
+      }}
+    mode: "0644"
+  register: cloudflared_result_config_file_vars
+  when: cloudflared_config_file_source_mode == "vars"

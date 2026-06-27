@@ -1,2 +1,4 @@
 ---
-# OS-specific configuration tasks should be included from this stage file.
+- name: configuring | Run config workflow
+  ansible.builtin.include_tasks: configuring_config.yml
+  when: cloudflared_config_file_target_path | trim | length > 0

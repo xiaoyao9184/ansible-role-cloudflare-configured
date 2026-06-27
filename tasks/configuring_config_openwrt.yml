@@ -1,0 +1,31 @@
+---
+- name: configuring config openwrt | Ensure config file parent directory exists
+  community.openwrt.file:
+    path: "{{ cloudflared_config_file_target_path | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: configuring config openwrt | Copy config file
+  community.openwrt.copy:
+    src: "{{ cloudflared_config_file_source_copy_file }}"
+    dest: "{{ cloudflared_config_file_target_path }}"
+  register: cloudflared_result_config_file_copy
+  when: cloudflared_config_file_source_mode == "copy"
+
+- name: configuring config openwrt | Render config file from template
+  community.openwrt.template:
+    src: "{{ cloudflared_config_file_source_template_file }}"
+    dest: "{{ cloudflared_config_file_target_path }}"
+  register: cloudflared_result_config_file_template
+  when: cloudflared_config_file_source_mode == "template"
+
+- name: configuring config openwrt | Write config file from vars mapping
+  community.openwrt.copy:
+    dest: "{{ cloudflared_config_file_target_path }}"
+    content: >-
+      {{
+        cloudflared_config_file_source_vars_content
+        | to_nice_yaml(indent=2, sort_keys=false)
+      }}
+  register: cloudflared_result_config_file_vars
+  when: cloudflared_config_file_source_mode == "vars"

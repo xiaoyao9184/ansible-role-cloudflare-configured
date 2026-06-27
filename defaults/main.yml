@@ -153,6 +153,23 @@ cloudflared_tunnel_credentials_file: ""
 # tunnel token used for generate credentials file
 cloudflared_tunnel_token: ""
 #
+# config file settings
+#
+# tunnel config destination path
+cloudflared_config_file_target_path: "{{ ansible_facts['user_dir'] | default(lookup('ansible.builtin.env', 'HOME'),true) }}/.cloudflared/config.yml"
+# whether to use become when writing the config file
+cloudflared_config_file_become: false
+# source mode used to build the config file
+# `copy` copies a local source file
+# `template` renders a local template file
+# `vars` serializes a variable mapping as YAML
+cloudflared_config_file_source_mode: vars
+# local source file used by `copy` mode
+cloudflared_config_file_source_copy_file: ""
+# local template file used by `template` mode
+cloudflared_config_file_source_template_file: ""
+# structured content serialized as YAML by `vars` mode
+cloudflared_config_file_source_vars_content: {}
 #
 # 3. Control variables
 #

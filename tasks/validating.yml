@@ -40,12 +40,42 @@
       - cloudflared_tunnel_name is string
       - cloudflared_tunnel_credentials_file is string
       - cloudflared_tunnel_token is string
+      - cloudflared_config_file_target_path is string
+      - cloudflared_config_file_become is boolean
+      - cloudflared_config_file_source_mode in ['copy', 'template', 'vars']
+      - cloudflared_config_file_source_copy_file is string
+      - cloudflared_config_file_source_template_file is string
+      - cloudflared_config_file_source_vars_content is mapping
+      - >-
+        (
+          cloudflared_config_file_source_mode == 'copy'
+          and cloudflared_config_file_source_copy_file | trim | length > 0
+          and cloudflared_config_file_source_template_file == ''
+          and cloudflared_config_file_source_vars_content | length == 0
+        )
+        or
+        (
+          cloudflared_config_file_source_mode == 'template'
+          and cloudflared_config_file_source_template_file | trim | length > 0
+          and cloudflared_config_file_source_copy_file == ''
+          and cloudflared_config_file_source_vars_content | length == 0
+        )
+        or
+        (
+          cloudflared_config_file_source_mode == 'vars'
+          and cloudflared_config_file_source_copy_file == ''
+          and cloudflared_config_file_source_template_file == ''
+        )
     fail_msg: >-
       `cloudflared_controller_binary_path` must be a string,
       `cloudflared_account_cert_file` must be a string,
       `cloudflared_tunnel_name` must be a string,
       `cloudflared_tunnel_credentials_file` must be a string,
       `cloudflared_tunnel_token` must be a string.
+      `cloudflared_config_file_target_path` must be strings when provided,
+      `cloudflared_config_file_source_mode` must be one of `copy`, `template`, or `vars`,
+      only the selected mode inputs may be populated,
+      `cloudflared_config_file_source_vars_content` must be a mapping.
 
 - name: validating | Validate control settings
   ansible.builtin.assert:

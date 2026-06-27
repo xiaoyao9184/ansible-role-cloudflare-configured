@@ -1,0 +1,53 @@
+---
+- name: configuring config docker | Ensure config file parent directory exists
+  become: "{{ cloudflared_config_file_become }}"
+  ansible.builtin.file:
+    path: "{{ cloudflared_config_file_target_path | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: configuring config docker | Create temporary config file
+  ansible.builtin.tempfile:
+    state: file
+    suffix: ".cloudflared-config"
+  register: cloudflared_result_config_file_tempfile
+
+- name: configuring config docker | Copy config file to temporary file
+  ansible.builtin.copy:
+    src: "{{ cloudflared_config_file_source_copy_file }}"
+    dest: "{{ cloudflared_result_config_file_tempfile.path }}"
+    mode: "0644"
+  register: cloudflared_result_config_file_copy
+  when: cloudflared_config_file_source_mode == "copy"
+
+- name: configuring config docker | Render config file from template to temporary file
+  ansible.builtin.template:
+    src: "{{ cloudflared_config_file_source_template_file }}"
+    dest: "{{ cloudflared_result_config_file_tempfile.path }}"
+    mode: "0644"
+  register: cloudflared_result_config_file_template
+  when: cloudflared_config_file_source_mode == "template"
+
+- name: configuring config docker | Write config file from vars mapping to temporary file
+  ansible.builtin.copy:
+    dest: "{{ cloudflared_result_config_file_tempfile.path }}"
+    content: >-
+      {{
+        cloudflared_config_file_source_vars_content
+        | to_nice_yaml(indent=2, sort_keys=false)
+      }}
+    mode: "0644"
+  register: cloudflared_result_config_file_vars
+  when: cloudflared_config_file_source_mode == "vars"
+
+- name: configuring config docker | Flush temporary config into target file
+  become: "{{ cloudflared_config_file_become }}"
+  ansible.builtin.shell: >
+    cat "{{ cloudflared_result_config_file_tempfile.path }}" > "{{ cloudflared_config_file_target_path }}"
+  register: cloudflared_result_config_file_flush
+  changed_when: true
+
+- name: configuring config docker | Remove temporary config file
+  ansible.builtin.file:
+    path: "{{ cloudflared_result_config_file_tempfile.path }}"
+    state: absent

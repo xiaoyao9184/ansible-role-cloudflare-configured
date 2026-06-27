@@ -1,0 +1,51 @@
+---
+# ref: [[#role_name_check|Go to molecule/README.md#role_name_check]]
+role_name_check: 1
+
+dependency:
+  name: galaxy
+
+driver:
+  name: default
+  options:
+    managed: false
+    ansible_connection_options:
+      ansible_connection: local
+
+platforms:
+  - name: macos15
+
+provisioner:
+  name: ansible
+  inventory:
+    hosts:
+      all:
+        hosts:
+          macos15:
+            ansible_connection: local
+  playbooks:
+    converge: converge.version-latest.yml
+    side_effect: converge.version-latest.yml
+
+scenario:
+  name: default-macos-15
+
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    # The `cloudflared_facts_is_installed` variable will change after `idempotence`
+    # - idempotence
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.version-specific.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.version-any.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.source-github.yml
+    - verify
+    - cleanup
+    - destroy
+
+verifier:
+  name: ansible

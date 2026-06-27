@@ -1,0 +1,34 @@
+---
+- name: Converge | github source
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_macos_source: github
+  tasks:
+    - name: github source | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_macos_distribution_is_supported == true
+          - cloudflared_facts_macos_binary_path != ''
+          - cloudflared_facts_is_installed == true
+          - cloudflared_facts_installed_version != ''
+          - cloudflared_facts_version_mode == 'latest'
+          - cloudflared_facts_macos_install_required == true
+          - cloudflared_tasks_macos_source == 'github'
+          - cloudflared_result_macos_brew_version is not defined
+          - cloudflared_result_macos_brew_info is not defined
+          - cloudflared_facts_macos_brew_stable_version is not defined
+          - cloudflared_facts_macos_brew_installed_versions is not defined
+          - cloudflared_facts_github_release_tag == 'latest'
+          - cloudflared_facts_github_release_asset in [
+              'cloudflared-darwin-amd64.tgz',
+              'cloudflared-darwin-arm64.tgz'
+            ]
+          - cloudflared_facts_github_release_url in [
+              'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64.tgz',
+              'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64.tgz'
+            ]
+          - cloudflared_result_github_download_dir is changed
+          - cloudflared_result_github_package_download is changed

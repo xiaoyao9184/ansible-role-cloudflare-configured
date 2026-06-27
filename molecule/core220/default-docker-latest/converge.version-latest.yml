@@ -1,0 +1,25 @@
+---
+- name: Converge | latest version
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_installation_mode: docker
+  tasks:
+    - name: latest | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_result_docker_host_info is defined
+          - cloudflared_facts_version_mode == 'latest'
+          - cloudflared_facts_docker_image_tag == 'latest'
+          - cloudflared_facts_docker_image_ref == 'cloudflare/cloudflared:latest'
+
+          - cloudflared_result_docker_image_info is defined
+
+          - cloudflared_facts_is_installed == false
+          - cloudflared_facts_installed_version == ""
+          - cloudflared_facts_docker_install_required == true
+          - cloudflared_facts_docker_image_exists == false
+
+          - cloudflared_result_docker_image_pull is defined

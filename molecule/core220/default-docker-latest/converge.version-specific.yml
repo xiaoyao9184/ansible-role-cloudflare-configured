@@ -1,0 +1,27 @@
+---
+- name: Converge | specific version
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_installation_mode: docker
+        cloudflared_package_version: 2026.2.0
+  tasks:
+    - name: specific | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_result_docker_host_info is defined
+          - cloudflared_facts_version_mode == 'specific'
+          - cloudflared_facts_docker_image_tag == '2026.2.0'
+          - cloudflared_facts_docker_image_ref == 'cloudflare/cloudflared:2026.2.0'
+
+          - cloudflared_result_docker_image_info is defined
+
+          - cloudflared_facts_is_installed == false
+          - cloudflared_facts_installed_version == ""
+          - cloudflared_facts_docker_install_required == true
+          - cloudflared_facts_docker_image_exists == false
+
+          - cloudflared_result_docker_image_pull is defined
+

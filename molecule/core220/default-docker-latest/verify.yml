@@ -1,0 +1,26 @@
+---
+# This is an example playbook to execute Ansible tests.
+
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: verify | inspect latest image
+      community.docker.docker_image_info:
+        name: cloudflare/cloudflared:latest
+      register: cloudflared_result_verify_latest
+      changed_when: false
+
+    - name: verify | inspect specific image
+      community.docker.docker_image_info:
+        name: cloudflare/cloudflared:2026.2.0
+      register: cloudflared_result_verify_specific
+      changed_when: false
+
+    - name: verify | assert image delivery results
+      ansible.builtin.assert:
+        that:
+          - cloudflared_result_verify_latest.images | length > 0
+          - cloudflared_result_verify_specific.images | length > 0
+          - (cloudflared_result_verify_latest.images | first).RepoTags is contains('cloudflare/cloudflared:latest')
+          - (cloudflared_result_verify_specific.images | first).RepoTags is contains('cloudflare/cloudflared:2026.2.0')

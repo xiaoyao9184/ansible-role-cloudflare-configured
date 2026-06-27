@@ -401,11 +401,8 @@
             "id": "moleculeScenario",
             "type": "pickString",
             "description": "Select the Molecule scenario",
-            "default": "default-ubuntu-latest",
+            "default": "docker-debian-13",
             "options": [
-                "default-ubuntu-latest",
-                "default-ubuntu-22.04",
-                "delegated-ubuntu-22.04",
                 "delegated-windows-latest",
                 "delegated-windows-2022",
                 "default-windows-latest",

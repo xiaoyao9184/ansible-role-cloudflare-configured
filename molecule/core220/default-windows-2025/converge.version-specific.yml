@@ -1,0 +1,44 @@
+---
+- name: Converge | specific version
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_package_version: 2026.2.0
+        cloudflared_windows_source: github
+  tasks:
+    - name: specific version | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_windows_distribution_is_supported == true
+          - cloudflared_results_windows_binary_candidates is defined
+          - cloudflared_result_windows_binary_lookup is defined
+          - cloudflared_facts_windows_binary_path != ''
+          - cloudflared_result_installed_version_query is not skipped
+          - cloudflared_facts_is_installed == true
+          - cloudflared_facts_installed_version != ''
+          - cloudflared_facts_version_mode == 'specific'
+          - cloudflared_facts_windows_install_required == true
+          - cloudflared_tasks_windows_source == 'github'
+          # replace
+          - cloudflared_result_windows_installed_packages is defined
+          - cloudflared_facts_windows_installed_packages | length == 1
+          - cloudflared_facts_windows_installed_winget_packages | length == 1
+            or cloudflared_facts_windows_installed_msi_product_ids | length == 1
+          - cloudflared_facts_windows_replace_required == true
+          - cloudflared_result_windows_winget_uninstall is not skipped
+            or cloudflared_results_windows_msi_uninstall is not skipped
+          # winget source
+          - cloudflared_result_windows_winget_version is not defined
+          - cloudflared_facts_windows_winget_install_argv is not defined
+          - cloudflared_result_windows_winget_install is not defined
+          - cloudflared_facts_windows_winget_upgrade_argv is not defined
+          - cloudflared_result_windows_winget_upgrade is not defined
+          # github source
+          - cloudflared_facts_github_release_tag == '2026.2.0'
+          - cloudflared_facts_github_release_asset == 'cloudflared-windows-amd64.msi'
+          - cloudflared_facts_github_release_url == 'https://github.com/cloudflare/cloudflared/releases/download/2026.2.0/cloudflared-windows-amd64.msi'
+          - cloudflared_result_github_download_dir is changed
+          - cloudflared_result_github_package_download is changed
+          - cloudflared_result_github_package_install is changed

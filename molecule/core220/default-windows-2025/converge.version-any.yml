@@ -1,0 +1,43 @@
+---
+- name: Converge | any version
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_package_version: any
+  tasks:
+    - name: any version | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_windows_distribution_is_supported == true
+          - cloudflared_results_windows_binary_candidates is defined
+          - cloudflared_result_windows_binary_lookup is defined
+          - cloudflared_facts_windows_binary_path != ''
+          - cloudflared_result_installed_version_query is not skipped
+          - cloudflared_facts_is_installed == true
+          - cloudflared_facts_installed_version != ''
+          - cloudflared_facts_version_mode == 'any'
+          - cloudflared_facts_windows_install_required == false
+          - cloudflared_tasks_windows_source == 'winget'
+          # replace
+          - cloudflared_result_windows_installed_packages is not defined
+          - cloudflared_facts_windows_installed_packages is not defined
+          - cloudflared_facts_windows_installed_winget_packages is not defined
+          - cloudflared_facts_windows_installed_msi_product_ids is not defined
+          - cloudflared_facts_windows_replace_required is not defined
+          - cloudflared_result_windows_winget_uninstall is not defined
+          - cloudflared_results_windows_msi_uninstall is not defined
+          # winget source
+          - cloudflared_result_windows_winget_version is not defined
+          - cloudflared_facts_windows_winget_install_argv is not defined
+          - cloudflared_result_windows_winget_install is not defined
+          - cloudflared_facts_windows_winget_upgrade_argv is not defined
+          - cloudflared_result_windows_winget_upgrade is not defined
+          # github source
+          - cloudflared_facts_github_release_tag is not defined
+          - cloudflared_facts_github_release_asset is not defined
+          - cloudflared_facts_github_release_url is not defined
+          - cloudflared_result_github_download_dir is not defined
+          - cloudflared_result_github_package_download is not defined
+          - cloudflared_result_github_package_install is not defined

@@ -1,0 +1,59 @@
+---
+# ref: [[#role_name_check|Go to molecule/README.md#role_name_check]]
+role_name_check: 1
+
+dependency:
+  name: galaxy
+
+driver:
+  name: default
+  options:
+    managed: false
+
+platforms:
+  - name: windows2025
+
+provisioner:
+  name: ansible
+  inventory:
+    hosts:
+      all:
+        hosts:
+          windows2025:
+            ansible_connection: winrm
+            ansible_host: ${WINDOWS_TEST_HOST}
+            ansible_port: ${WINDOWS_TEST_PORT}
+            ansible_user: ${WINDOWS_TEST_USER}
+            ansible_password: ${WINDOWS_TEST_PASSWORD}
+            ansible_winrm_transport: ${WINDOWS_TEST_TRANSPORT}
+            ansible_winrm_scheme: ${WINDOWS_TEST_SCHEME}
+            ansible_winrm_server_cert_validation: ignore
+            ansible_shell_type: powershell
+            ansible_become_method: runas
+            ansible_become_user: System
+  playbooks:
+    converge: converge.version-latest.yml
+    side_effect: converge.version-latest.yml
+
+scenario:
+  name: default-windows-2025
+
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    # The `cloudflared_facts_is_installed` variable will change after `idempotence`
+    # - idempotence
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.version-specific.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.version-any.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.source-github.yml
+    - verify
+    - cleanup
+    - destroy
+
+verifier:
+  name: ansible

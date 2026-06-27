@@ -1,0 +1,41 @@
+---
+- name: Converge | latest version
+  hosts: all
+  gather_facts: false
+  roles:
+    - codex_with_openspec.cloudflare_configured
+  tasks:
+    - name: latest version | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_windows_distribution_is_supported == true
+          - cloudflared_results_windows_binary_candidates is defined
+          - cloudflared_result_windows_binary_lookup is defined
+          - cloudflared_facts_windows_binary_path == ''
+          - cloudflared_result_installed_version_query is skipped
+          - cloudflared_facts_is_installed == false
+          - cloudflared_facts_installed_version == ''
+          - cloudflared_facts_version_mode == 'latest'
+          - cloudflared_facts_windows_install_required == true
+          - cloudflared_tasks_windows_source == 'winget'
+          # replace
+          - cloudflared_result_windows_installed_packages is not defined
+          - cloudflared_facts_windows_installed_packages is not defined
+          - cloudflared_facts_windows_installed_winget_packages is not defined
+          - cloudflared_facts_windows_installed_msi_product_ids is not defined
+          - cloudflared_facts_windows_replace_required is not defined
+          - cloudflared_result_windows_winget_uninstall is not defined
+          - cloudflared_results_windows_msi_uninstall is not defined
+          # winget source
+          - cloudflared_result_windows_winget_version is defined
+          - cloudflared_facts_windows_winget_install_argv is defined
+          - cloudflared_result_windows_winget_install is changed
+          - cloudflared_facts_windows_winget_upgrade_argv is not defined
+          - cloudflared_result_windows_winget_upgrade is skipped
+          # github source
+          - cloudflared_facts_github_release_tag is not defined
+          - cloudflared_facts_github_release_asset is not defined
+          - cloudflared_facts_github_release_url is not defined
+          - cloudflared_result_github_download_dir is not defined
+          - cloudflared_result_github_package_download is not defined
+          - cloudflared_result_github_package_install is not defined

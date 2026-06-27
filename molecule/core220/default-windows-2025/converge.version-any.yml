@@ -6,6 +6,8 @@
     - role: codex_with_openspec.cloudflare_configured
       vars:
         cloudflared_package_version: any
+        # Skip service management
+        cloudflared_service_name: ""
   tasks:
     - name: any version | assert
       ansible.builtin.assert:

@@ -7,6 +7,8 @@
       vars:
         cloudflared_package_version: 2026.2.0
         cloudflared_windows_source: github
+        # Skip service management
+        cloudflared_service_name: ""
   tasks:
     - name: specific version | assert
       ansible.builtin.assert:

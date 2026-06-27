@@ -6,6 +6,8 @@
     - role: codex_with_openspec.cloudflare_configured
       vars:
         cloudflared_windows_source: github
+        # Skip service management
+        cloudflared_service_name: ""
   tasks:
     - name: github source | assert
       ansible.builtin.assert:

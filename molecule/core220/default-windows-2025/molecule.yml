@@ -57,6 +57,7 @@ scenario:
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.config-vars.yml
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.config-copy.yml
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.config-template.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.service-enable.yml
     - verify
     - cleanup
     - destroy

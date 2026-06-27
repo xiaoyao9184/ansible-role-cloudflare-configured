@@ -10,6 +10,8 @@
         cloudflared_config_file_become: false
         cloudflared_config_file_source_mode: copy
         cloudflared_config_file_source_copy_file: "{{ playbook_dir }}/config/config.yml"
+        # Skip service management
+        cloudflared_service_name: ""
   tasks:
     - name: copy | assert
       ansible.builtin.assert:

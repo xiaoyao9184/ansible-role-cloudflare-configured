@@ -1,0 +1,90 @@
+---
+- name: Converge | service enable
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_installation_mode: docker
+        cloudflared_package_version: latest
+        # Create a tunnel using a real account.
+        cloudflared_account_cert_file: >-
+          {{
+            lookup('env', 'HOME')
+            | default('/home/nonroot', true)
+            ~
+            '/.cloudflared/cert.pem'
+          }}
+        cloudflared_tunnel_name: >-
+          {{
+            lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+            | default('ansible-role-cloudflare-configured-test-tunnel', true)
+          }}
+        cloudflared_tunnel_credentials_file: >-
+          {{
+            lookup('env', 'HOME')
+            | default('/home/nonroot', true)
+            ~ '/.cloudflared/'
+            ~ lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+              | default('ansible-role-cloudflare-configured-test-tunnel', true)
+            ~ '.json'
+          }}
+        # Create empty credentials file
+        cloudflared_credentials_file_target_path: /tmp/cloudflare_configured/cloudflared-vars.json
+        cloudflared_credentials_file_become: false
+        cloudflared_credentials_file_source_mode: vars
+        # Create empty config file
+        cloudflared_config_file_target_path: /tmp/cloudflare_configured/cloudflared-vars.yml
+        cloudflared_config_file_become: false
+        cloudflared_config_file_source_mode: vars
+        # Start the service using the token created from the tunnel.
+        cloudflared_tunnel_run_parameter_args:
+          autoupdate-freq: ""
+          config: "{{ cloudflared_config_file_target_path }}"
+          dns-resolver-addrs: []
+          edge-bind-address: ""
+          edge-ip-version: ""
+          grace-period: ""
+          logfile: ""
+          loglevel: ""
+          metrics: ""
+          no-autoupdate: false
+          origincert: ""
+          pidfile: ""
+          post-quantum: ""
+          protocol: ""
+          region: ""
+          retries: ""
+          tag: ""
+          token: >-
+            {{
+              hostvars['localhost'].cloudflared_facts_tunnel_results[
+                lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+                | default('ansible-role-cloudflare-configured-test-tunnel', true)
+              ].token
+            }}
+          token-file: ""
+  tasks:
+    - name: service enable | inspect docker container info
+      community.docker.docker_container_info:
+        name: cloudflared
+      register: molecule_result_docker_container_info
+
+    - name: service enable | assert
+      ansible.builtin.assert:
+        that:
+          - molecule_result_docker_container_info.exists
+
+          - cloudflared_facts_service_tunnel_shared_options == ['--config', '/tmp/cloudflare_configured/cloudflared-vars.yml']
+          - cloudflared_facts_service_tunnel_run_options | length > 0
+          - cloudflared_facts_service_tunnel_cli_tail | length == 0
+          - cloudflared_facts_service_command_args[:5] == ['tunnel', '--config', '/tmp/cloudflare_configured/cloudflared-vars.yml', 'run', '--token']
+
+          - cloudflared_facts_docker_image_tag == "latest"
+          - cloudflared_facts_docker_image_ref == "cloudflare/cloudflared:latest"
+          - cloudflared_result_service_docker_container is defined
+
+    - name: service enable | stop
+      community.docker.docker_container:
+        name: cloudflared
+        state: absent

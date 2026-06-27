@@ -3,7 +3,10 @@
   hosts: all
   gather_facts: false
   roles:
-    - codex_with_openspec.cloudflare_configured
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        # Skip service management
+        cloudflared_service_name: ""
   tasks:
     - name: latest version | assert
       ansible.builtin.assert:

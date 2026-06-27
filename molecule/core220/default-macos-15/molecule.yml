@@ -23,7 +23,9 @@ provisioner:
         hosts:
           macos15:
             ansible_connection: local
+            ansible_become_password: ${MACOS_TEST_BECOME_PASSWORD}
   playbooks:
+    prepare: prepare.yml
     converge: converge.version-latest.yml
     side_effect: converge.version-latest.yml
 
@@ -43,6 +45,7 @@ scenario:
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.version-specific.yml
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.version-any.yml
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.source-github.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.service-enable.yml
     - verify
     - cleanup
     - destroy

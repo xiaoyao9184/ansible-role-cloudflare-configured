@@ -1,0 +1,69 @@
+---
+- name: Cleanup | windows2025
+  hosts: windows2025
+  gather_facts: false
+  tasks:
+    - name: Delete service
+      ansible.windows.win_service:
+        name: cloudflared
+        state: absent
+      failed_when: false
+
+    - name: Delete package
+      ansible.windows.win_command:
+        argv:
+          - winget
+          - uninstall
+          - --all
+          - cloudflared
+      failed_when: false
+
+- name: Cleanup | localhost
+  hosts: localhost
+  gather_facts: true
+  tasks:
+    - name: Delete tunnel
+      ansible.builtin.command:
+        argv:
+          - >-
+            {{
+              lookup('env', 'HOME')
+              | default('/home/nonroot', true)
+              ~ '/.cloudflared/cloudflared'
+            }}
+          - tunnel
+          - delete
+          - -f
+          - >-
+            {{
+              lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+              | default('ansible-role-cloudflare-configured-test-tunnel', true)
+            }}
+      failed_when: false
+
+    - name: Delete local credentials file
+      ansible.builtin.file:
+        path: >-
+          {{
+            lookup('env', 'HOME')
+            | default('/home/nonroot', true)
+            ~ '/.cloudflared/' ~ item
+          }}
+        state: absent
+      loop:
+        - >-
+          {{
+            lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+            | default('ansible-role-cloudflare-configured-test-tunnel', true)
+          }}
+          ~ '.json'
+
+    - name: Delete local bin file
+      ansible.builtin.file:
+        path: >-
+          {{
+            lookup('env', 'HOME')
+            | default('/home/nonroot', true)
+            ~ '/.cloudflared/cloudflared'
+          }}
+        state: absent

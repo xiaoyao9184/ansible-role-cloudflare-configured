@@ -12,6 +12,8 @@
         cloudflared_config_file_source_vars_content:
           tunnel: 00000000-0000-0000-2025-000000000001
           credentials-file: C:\Users\ansibleci\.cloudflared\00000000-0000-0000-2025-000000000001.json
+        # Skip service management
+        cloudflared_service_name: ""
   tasks:
     - name: vars | assert
       ansible.builtin.assert:

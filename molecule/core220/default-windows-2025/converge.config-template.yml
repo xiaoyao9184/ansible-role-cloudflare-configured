@@ -10,6 +10,8 @@
         cloudflared_config_file_become: false
         cloudflared_config_file_source_mode: template
         cloudflared_config_file_source_template_file: "{{ playbook_dir }}/config/config.yml.j2"
+        # Skip service management
+        cloudflared_service_name: ""
   tasks:
     - name: template | assert
       ansible.builtin.assert:

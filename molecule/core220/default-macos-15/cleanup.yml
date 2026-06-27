@@ -1,0 +1,83 @@
+---
+- name: Cleanup | macos15
+  hosts: macos15
+  gather_facts: false
+  tasks:
+    - name: Unload service
+      become: true
+      community.general.launchd:
+        name: com.cloudflare.cloudflared
+        state: unloaded
+      failed_when: false
+
+    - name: Delete service
+      become: true
+      ansible.builtin.file:
+        path: /Library/LaunchDaemons/com.cloudflare.cloudflared.plist
+        state: absent
+      failed_when: false
+
+    - name: Delete package
+      community.general.homebrew:
+        name: cloudflared
+        state: absent
+      failed_when: false
+
+    - name: Delete bin
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /usr/local/bin/cloudflared
+        - /opt/homebrew/bin/cloudflared
+      failed_when: false
+
+- name: Cleanup | localhost
+  hosts: localhost
+  gather_facts: true
+  tasks:
+    - name: Delete tunnel
+      ansible.builtin.command:
+        argv:
+          - >-
+            {{
+              lookup('env', 'HOME')
+              | default('/home/nonroot', true)
+              ~ '/.cloudflared/cloudflared'
+            }}
+          - tunnel
+          - delete
+          - -f
+          - >-
+            {{
+              lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+              | default('ansible-role-cloudflare-configured-test-tunnel', true)
+            }}
+      failed_when: false
+
+    - name: Delete local credentials file
+      ansible.builtin.file:
+        path: >-
+          {{
+            lookup('env', 'HOME')
+            | default('/home/nonroot', true)
+            ~ '/.cloudflared/' ~ item
+          }}
+        state: absent
+      loop:
+        - >-
+          {{
+            lookup('env', 'CLOUDFLARE_TUNNEL_NAME')
+            | default('ansible-role-cloudflare-configured-test-tunnel', true)
+          }}
+          ~ '.json'
+
+    - name: Delete local bin file
+      ansible.builtin.file:
+        path: >-
+          {{
+            lookup('env', 'HOME')
+            | default('/home/nonroot', true)
+            ~ '/.cloudflared/cloudflared'
+          }}
+        state: absent

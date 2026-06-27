@@ -47,6 +47,9 @@ galaxy_info:
     - name: Amazon Linux
       versions:
         - "2023"
+    - name: macOS
+      versions:
+        - all
 
   galaxy_tags:
     - cloudflare

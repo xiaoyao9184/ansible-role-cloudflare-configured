@@ -1,0 +1,48 @@
+---
+- name: installing macos | Validate Homebrew is available
+  ansible.builtin.command:
+    argv:
+      - "{{ cloudflared_macos_brew_command }}"
+      - --version
+  register: cloudflared_result_macos_brew_version
+  changed_when: false
+
+- name: installing macos | Query Homebrew package metadata
+  ansible.builtin.command:
+    argv:
+      - "{{ cloudflared_macos_brew_command }}"
+      - info
+      - --json=v2
+      - "{{ cloudflared_macos_brew_package_name }}"
+  register: cloudflared_result_macos_brew_info
+  changed_when: false
+
+- name: installing macos | Facted Homebrew package metadata
+  vars:
+    _brew_info: "{{ cloudflared_result_macos_brew_info.stdout | from_json }}"
+    _formula: "{{ _brew_info['formulae'][0] }}"
+  ansible.builtin.set_fact:
+    cloudflared_facts_macos_brew_stable_version: "{{ _formula['versions']['stable'] }}"
+    cloudflared_facts_macos_brew_installed_versions: >-
+      {{
+        _formula['installed']
+        | map(attribute='version')
+        | list
+      }}
+
+- name: installing macos | Install cloudflared via Homebrew
+  community.general.homebrew:
+    name: "{{ cloudflared_macos_brew_package_name }}"
+    state: "{{ 'latest' if cloudflared_facts_version_mode == 'latest' else 'present' }}"
+    # force brew installation to overwrite GitHub binary version
+    install_options:
+      - overwrite
+      - force
+  when:
+    - not cloudflared_facts_is_installed
+      or
+      (
+        cloudflared_facts_version_mode == 'latest'
+        and
+        cloudflared_facts_installed_version != cloudflared_facts_macos_brew_stable_version
+      )

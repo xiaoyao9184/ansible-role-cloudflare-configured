@@ -9,3 +9,7 @@
   when: >-
     ansible_facts["os_family"] == "RedHat" or
     ansible_facts["os_family"] == "Rocky"
+
+- name: installing | Run macOS installation tasks
+  ansible.builtin.include_tasks: installing_macos.yml
+  when: ansible_facts["os_family"] == "Darwin"

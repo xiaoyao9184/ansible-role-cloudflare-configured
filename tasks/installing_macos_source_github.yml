@@ -1,0 +1,74 @@
+---
+- name: installing macos | Validate GitHub release asset architecture support
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['architecture'] is defined
+      - ansible_facts['architecture'] in cloudflared_github_release_asset_arch_mapping
+    fail_msg: >-
+      Unsupported macOS GitHub release architecture:
+      {{ ansible_facts['architecture'] | default('UNDEFINED') }}.
+
+- name: installing macos | Facted GitHub release download metadata
+  ansible.builtin.set_fact:
+    cloudflared_facts_github_release_tag: >-
+      {{
+        'latest'
+        if cloudflared_package_version == 'latest'
+        else cloudflared_package_version
+      }}
+    cloudflared_facts_github_release_asset: >-
+      cloudflared-darwin-{{ cloudflared_github_release_asset_arch_mapping[ansible_facts['architecture']] }}.tgz
+
+- name: installing macos | Build GitHub release download URL
+  ansible.builtin.set_fact:
+    cloudflared_facts_github_release_url: >-
+      {{
+        cloudflared_github_base_url ~ '/' ~
+        cloudflared_github_repository ~ '/releases/' ~
+        ('latest/download/' ~ cloudflared_facts_github_release_asset
+         if cloudflared_facts_github_release_tag == 'latest'
+         else 'download/' ~ cloudflared_facts_github_release_tag ~ '/' ~ cloudflared_facts_github_release_asset)
+      }}
+
+- name: installing macos | Create temporary directory for GitHub package download
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: cloudflared-github-
+  register: cloudflared_result_github_download_dir
+
+- name: installing macos | Download cloudflared macOS package from GitHub Releases
+  ansible.builtin.get_url:
+    url: "{{ cloudflared_facts_github_release_url }}"
+    dest: "{{ cloudflared_result_github_download_dir.path }}/{{ cloudflared_facts_github_release_asset }}"
+    mode: "0644"
+    force: "{{ cloudflared_package_version == 'latest' }}"
+  register: cloudflared_result_github_package_download
+  until: "cloudflared_result_github_package_download is not failed"
+  retries: 10
+  delay: 1
+
+- name: installing macos | Extract cloudflared macOS package from GitHub Releases
+  ansible.builtin.unarchive:
+    src: "{{ cloudflared_result_github_download_dir.path }}/{{ cloudflared_facts_github_release_asset }}"
+    dest: "{{ cloudflared_result_github_download_dir.path }}"
+    remote_src: true
+
+- name: installing macos | Ensure GitHub binary target directory exists
+  ansible.builtin.file:
+    path: "{{ cloudflared_macos_github_binary_path | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: installing macos | Install cloudflared binary from GitHub Releases
+  ansible.builtin.copy:
+    src: "{{ cloudflared_result_github_download_dir.path }}/cloudflared"
+    dest: "{{ cloudflared_macos_github_binary_path }}"
+    mode: "0755"
+    remote_src: true
+
+- name: installing macos | Remove temporary GitHub package download directory
+  ansible.builtin.file:
+    path: "{{ cloudflared_result_github_download_dir.path }}"
+    state: absent
+  when:
+    - cloudflared_result_github_download_dir is defined

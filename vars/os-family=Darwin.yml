@@ -1,0 +1,8 @@
+---
+# Used only for Darwin os family
+
+cloudflared_github_release_asset_arch_mapping:
+  x86_64: amd64
+  amd64: amd64
+  aarch64: arm64
+  arm64: arm64

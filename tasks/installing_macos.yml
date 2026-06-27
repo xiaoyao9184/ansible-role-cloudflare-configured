@@ -1,0 +1,136 @@
+---
+- name: installing macos | Validate macOS installation settings
+  ansible.builtin.assert:
+    that:
+      - cloudflared_macos_source in ["brew", "github"]
+      - cloudflared_macos_brew_command is string
+      - cloudflared_macos_brew_command | length > 0
+      - cloudflared_macos_brew_package_name is string
+      - cloudflared_macos_brew_package_name | length > 0
+      - cloudflared_macos_binary_candidates is sequence
+      - cloudflared_macos_binary_candidates is not string
+      - cloudflared_macos_binary_candidates | length > 0
+      - cloudflared_macos_github_binary_path is string
+      - cloudflared_macos_github_binary_path.startswith("/")
+      - cloudflared_github_release_asset_arch_mapping is mapping
+    fail_msg: >-
+      macOS installation settings are invalid.
+      Check source selection, Homebrew command, package name,
+      binary candidates, GitHub binary path,
+      and GitHub architecture mapping.
+
+- name: installing macos | Facted macOS platform support
+  ansible.builtin.set_fact:
+    cloudflared_facts_macos_distribution_is_supported: >-
+      {{
+        ansible_facts['os_family'] == 'Darwin' or
+        ansible_facts.get('system', '') == 'Darwin' or
+        ansible_facts.get('distribution', '') == 'MacOSX'
+      }}
+
+- name: installing macos | Validate target distribution is macOS
+  ansible.builtin.assert:
+    that:
+      - cloudflared_facts_macos_distribution_is_supported
+    fail_msg: >-
+      Unsupported macOS distribution for cloudflared installation:
+      os_family={{ ansible_facts['os_family'] | default('UNDEFINED') }},
+      system={{ ansible_facts['system'] | default('UNDEFINED') }},
+      distribution={{ ansible_facts['distribution'] | default('UNDEFINED') }}.
+
+- name: installing macos | Check candidate cloudflared binary paths
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ cloudflared_macos_binary_candidates }}"
+  register: cloudflared_results_macos_binary_candidates
+
+- name: installing macos | Facted installed cloudflared binary path from candidates
+  ansible.builtin.set_fact:
+    cloudflared_facts_macos_binary_path: >-
+      {{
+        (
+          cloudflared_results_macos_binary_candidates.results
+          | selectattr('stat.exists')
+          | map(attribute='stat.path')
+          | list
+          | first
+        )
+        | default('')
+      }}
+
+- name: installing macos | Fallback to PATH lookup for cloudflared binary
+  ansible.builtin.shell: command -v cloudflared
+  register: cloudflared_result_macos_binary_lookup
+  changed_when: false
+  failed_when: false
+  when: cloudflared_facts_macos_binary_path == ''
+
+- name: installing macos | Facted resolved cloudflared binary path
+  ansible.builtin.set_fact:
+    cloudflared_facts_macos_binary_path: >-
+      {{
+        cloudflared_result_macos_binary_lookup.stdout
+        if
+          cloudflared_facts_macos_binary_path == '' and
+          cloudflared_result_macos_binary_lookup is defined and
+          cloudflared_result_macos_binary_lookup.rc == 0
+        else cloudflared_facts_macos_binary_path
+      }}
+
+- name: installing macos | Check installed cloudflared version
+  ansible.builtin.command:
+    argv:
+      - "{{ cloudflared_facts_macos_binary_path }}"
+      - --version
+  register: cloudflared_result_installed_version_query
+  changed_when: false
+  failed_when: false
+  when: cloudflared_facts_macos_binary_path != ''
+
+- name: installing macos | Facted installed cloudflared version details
+  ansible.builtin.set_fact:
+    cloudflared_facts_is_installed: >-
+      {{
+        cloudflared_facts_macos_binary_path != '' and
+        cloudflared_result_installed_version_query is defined and
+        cloudflared_result_installed_version_query.get('rc') == 0
+      }}
+    cloudflared_facts_installed_version: >-
+      {{
+        (
+          cloudflared_result_installed_version_query.get('stdout', '')
+          | regex_search('[0-9]+(\.[0-9]+){1,3}')
+        )
+        if
+          cloudflared_result_installed_version_query is defined and
+          cloudflared_result_installed_version_query.get('rc') == 0
+        else ''
+      }}
+    cloudflared_facts_version_mode: >-
+      {{
+        cloudflared_package_version
+        if cloudflared_package_version in ['latest', 'any']
+        else 'specific'
+      }}
+
+- name: installing macos | Facted macOS installation behavior
+  ansible.builtin.set_fact:
+    cloudflared_facts_macos_install_required: >-
+      {{
+        (cloudflared_facts_version_mode == 'latest') or
+        (cloudflared_facts_version_mode == 'any' and
+         not cloudflared_facts_is_installed) or
+        (cloudflared_facts_version_mode == 'specific' and
+         cloudflared_facts_installed_version != cloudflared_package_version)
+      }}
+    cloudflared_tasks_macos_source: >-
+      {{
+        'github'
+        if cloudflared_facts_version_mode == 'specific'
+        else cloudflared_macos_source
+      }}
+
+- name: installing macos | Install cloudflared using selected source
+  ansible.builtin.include_tasks: >-
+    installing_macos_source_{{ cloudflared_tasks_macos_source }}.yml
+  when: cloudflared_facts_macos_install_required

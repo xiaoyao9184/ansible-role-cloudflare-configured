@@ -85,6 +85,22 @@ cloudflared_redhat_package_manager_distribution_major_mapping: {}
 cloudflared_redhat_repository_url: https://pkg.cloudflare.com/cloudflared.repo
 cloudflared_redhat_repository_path: /etc/yum.repos.d/cloudflared.repo
 #
+# macos package source
+#
+# `brew` use Homebrew for install
+# `github` use github releases file for install
+# auto override to `github` if cloudflared package version specified
+cloudflared_macos_source: brew
+#
+# homebrew repository management
+#
+cloudflared_macos_brew_command: brew
+cloudflared_macos_brew_package_name: cloudflared
+cloudflared_macos_binary_candidates:
+  - /opt/homebrew/bin/cloudflared
+  - /usr/local/bin/cloudflared
+cloudflared_macos_github_binary_path: /usr/local/bin/cloudflared
+#
 # 2. Configuration variables
 #
 # tunnel create settings

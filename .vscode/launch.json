@@ -413,6 +413,7 @@
                 "docker-centos-7",
                 "docker-amazonlinux-2023",
                 "default-macos-15",
+                "default-windows-2025",
             ]
         }
     ]

@@ -151,7 +151,7 @@ cloudflared_tunnel_credentials_file: ""
 # tunnel token settings
 #
 # tunnel token used for generate credentials file
-cloudflared_tunnel_token: ""
+cloudflared_tunnel_token: "{{ hostvars['localhost'].cloudflared_facts_tunnel_results[cloudflared_tunnel_name].token | default('') }}"
 #
 # credentials file settings
 #

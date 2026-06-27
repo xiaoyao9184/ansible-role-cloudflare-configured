@@ -1,4 +1,8 @@
 ---
+
+- name: configuring | Run tunnel workflow
+  ansible.builtin.include_tasks: configuring_tunnel.yml
+
 - name: configuring | Run credentials workflow
   ansible.builtin.include_tasks: configuring_credentials.yml
   when: cloudflared_credentials_file_target_path | trim | length > 0

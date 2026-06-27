@@ -1,0 +1,224 @@
+---
+- name: configuring tunnel create | @localhost | Check account cert file
+  ansible.builtin.stat:
+    path: "{{ cloudflared_item_tunnel.account_cert_file }}"
+  register: cloudflared_item_result_tunnel_account_cert_stat
+
+- when: cloudflared_item_result_tunnel_account_cert_stat.stat.exists
+  block:
+  - name: configuring tunnel create | @localhost | Query existing tunnels
+    ansible.builtin.command:
+      argv:
+        - >-
+          {{
+            cloudflared_controller_binary_path
+            | default(
+              hostvars['localhost'].ansible_facts['user_dir']
+              ~ '/.cloudflared/cloudflared'
+            )
+          }}
+        - tunnel
+        - --origincert
+        - "{{ cloudflared_item_tunnel.account_cert_file }}"
+        - list
+        - --output
+        - json
+    register: cloudflared_item_result_tunnel_list_command
+    changed_when: false
+    failed_when: false
+
+  - when: cloudflared_item_result_tunnel_list_command.rc == 0
+    block:
+    - name: configuring tunnel create | @localhost | Detect tunnel existence
+      ansible.builtin.set_fact:
+        cloudflared_item_facts_tunnel_exists: >-
+          {{
+            (
+              cloudflared_item_result_tunnel_list_command.stdout
+              | default('[]')
+              | from_json
+            )
+            | selectattr('name', 'equalto', cloudflared_item_tunnel.tunnel_name)
+            | list
+            | length > 0
+          }}
+
+    - name: configuring tunnel create | @localhost | Ensure credentials directory exists
+      ansible.builtin.file:
+        path: "{{ cloudflared_item_tunnel.tunnel_credentials_file | dirname }}"
+        state: directory
+        mode: "0755"
+      when:
+        - cloudflared_item_tunnel.tunnel_credentials_file | length > 0
+
+    - when: hostvars['localhost'].cloudflared_item_facts_tunnel_exists | default(false)
+      block:
+        - name: configuring tunnel create | @localhost | Build token argv
+          ansible.builtin.set_fact:
+            cloudflared_item_facts_tunnel_token_argv: >-
+              {{
+                [
+                  (
+                    cloudflared_controller_binary_path
+                    | default(
+                      hostvars['localhost'].ansible_facts['user_dir']
+                      ~ '/.cloudflared/cloudflared'
+                    )
+                  ),
+                  'tunnel',
+                  '--origincert',
+                  cloudflared_item_tunnel.account_cert_file,
+                  'token'
+                ]
+                +
+                (
+                  [
+                    '--credentials-file',
+                    cloudflared_item_tunnel.tunnel_credentials_file
+                  ]
+                  if cloudflared_item_tunnel.tunnel_credentials_file | length > 0
+                  else []
+                )
+                +
+                [
+                  cloudflared_item_tunnel.tunnel_name
+                ]
+              }}
+
+        - name: configuring tunnel create | @localhost | Execute tunnel token command
+          ansible.builtin.command:
+            argv: "{{ hostvars['localhost'].cloudflared_item_facts_tunnel_token_argv }}"
+          register: cloudflared_item_result_tunnel_token_command
+          changed_when: false
+          failed_when: false
+
+        - name: configuring tunnel create | @localhost | Read tunnel credentials file
+          ansible.builtin.slurp:
+            src: "{{ cloudflared_item_tunnel.tunnel_credentials_file }}"
+          register: cloudflared_item_result_tunnel_token_credentials_file
+          when:
+            - cloudflared_item_tunnel.tunnel_credentials_file | length > 0
+
+        - name: configuring tunnel create | @localhost | Parse tunnel token result
+          ansible.builtin.set_fact:
+            cloudflared_item_facts_tunnel_token_result: >-
+              {{
+                (
+                  (
+                    cloudflared_item_result_tunnel_list_command.stdout
+                    | default('[]')
+                    | from_json
+                  )
+                  | community.general.json_query(
+                      "[?name=='" ~ cloudflared_item_tunnel.tunnel_name ~ "'].{id: id, name: name}"
+                    )
+                  | first
+                  | default({})
+                )
+                |
+                combine(
+                  {
+                    'token': (
+                      (
+                        (
+                          cloudflared_item_result_tunnel_token_credentials_file.content
+                          | b64decode
+                          | from_json
+                        )
+                        | community.general.json_query('{a: AccountTag, s: TunnelSecret, t: TunnelID}')
+                        | to_json
+                        | b64encode
+                      )
+                      if cloudflared_item_tunnel.tunnel_credentials_file | length > 0
+                      else
+                      (
+                        cloudflared_item_result_tunnel_token_command.stdout
+                        | default('')
+                        | trim
+                      )
+                    )
+                  }
+                )
+              }}
+
+    - when: not (hostvars['localhost'].cloudflared_item_facts_tunnel_exists | default(false))
+      block:
+        - name: configuring tunnel create | @localhost | Build create argv
+          ansible.builtin.set_fact:
+            cloudflared_item_facts_tunnel_create_argv: >-
+              {{
+                [
+                  (
+                    cloudflared_controller_binary_path
+                    | default(
+                      hostvars['localhost'].ansible_facts['user_dir']
+                      ~ '/.cloudflared/cloudflared'
+                    )
+                  ),
+                  'tunnel',
+                  '--origincert',
+                  cloudflared_item_tunnel.account_cert_file,
+                  'create',
+                  '--output',
+                  'json'
+                ]
+                +
+                (
+                  [
+                    '--credentials-file',
+                    cloudflared_item_tunnel.tunnel_credentials_file
+                  ]
+                  if cloudflared_item_tunnel.tunnel_credentials_file | length > 0
+                  else []
+                )
+                +
+                [
+                  cloudflared_item_tunnel.tunnel_name
+                ]
+              }}
+
+        - name: configuring tunnel create | @localhost | Execute tunnel create command
+          ansible.builtin.command:
+            argv: "{{ hostvars['localhost'].cloudflared_item_facts_tunnel_create_argv }}"
+          register: cloudflared_item_result_tunnel_create_command
+          changed_when: cloudflared_item_result_tunnel_create_command.rc == 0
+          failed_when: false
+
+        - name: configuring tunnel create | @localhost | Parse tunnel create result
+          ansible.builtin.set_fact:
+            cloudflared_item_facts_tunnel_create_result: >-
+              {{
+                (
+                  cloudflared_item_result_tunnel_create_command.stdout
+                  | default('{}')
+                  | from_json
+                  | community.general.json_query('{id: id, name: name, token: token}')
+                )
+                if cloudflared_item_result_tunnel_create_command.rc | default(1) == 0
+                else {}
+              }}
+
+    - name: configuring tunnel create | @localhost | Initialize results fact
+      ansible.builtin.set_fact:
+        cloudflared_facts_tunnel_results: >-
+          {{
+            hostvars['localhost'].cloudflared_facts_tunnel_results
+            | default({})
+          }}
+
+    - name: configuring tunnel create | @localhost | Merge current tunnel result
+      ansible.builtin.set_fact:
+        cloudflared_facts_tunnel_results: >-
+          {{
+            hostvars['localhost'].cloudflared_facts_tunnel_results
+            |
+            combine(
+              {
+                (cloudflared_item_tunnel.tunnel_name): (
+                  hostvars['localhost'].cloudflared_item_facts_tunnel_token_result
+                  if hostvars['localhost'].cloudflared_item_facts_tunnel_exists | default(false)
+                  else hostvars['localhost'].cloudflared_item_facts_tunnel_create_result
+                )
+              }
+            )
+          }}

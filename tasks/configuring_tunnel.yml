@@ -1,0 +1,71 @@
+---
+
+- name: configuring tunnel | Fact to host scope
+  ansible.builtin.set_fact:
+    cloudflared_facts_account_cert_file: "{{ cloudflared_account_cert_file | default('') | trim }}"
+    cloudflared_facts_tunnel_name: "{{ cloudflared_tunnel_name | default('') | trim }}"
+    cloudflared_facts_tunnel_credentials_file: "{{ cloudflared_tunnel_credentials_file | default('') | trim }}"
+
+- name: configuring tunnel | Collect unique tunnel records from play hosts
+  ansible.builtin.set_fact:
+    cloudflared_facts_unique_tunnels: >-
+      {%- set ns = namespace(records=[]) -%}
+      {%- for host in ansible_play_hosts_all -%}
+        {%- if
+          hostvars[host].cloudflared_facts_account_cert_file is string
+          and hostvars[host].cloudflared_facts_account_cert_file | trim | length > 0
+          and hostvars[host].cloudflared_facts_tunnel_name is string
+          and hostvars[host].cloudflared_facts_tunnel_name | trim | length > 0
+        -%}
+          {%- set _ = ns.records.append(
+            {
+              'account_cert_file':
+                (
+                  hostvars[host].cloudflared_facts_account_cert_file
+                  | trim
+                ),
+
+              'tunnel_name':
+                (
+                  hostvars[host].cloudflared_facts_tunnel_name
+                  | trim
+                ),
+
+              'tunnel_credentials_file':
+                (
+                  hostvars[host].cloudflared_facts_tunnel_credentials_file
+                  | default('')
+                  | trim
+                )
+            }
+          ) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ ns.records | unique }}
+  delegate_to: localhost
+  delegate_facts: true
+  run_once: true
+
+- name: configuring tunnel | Install cloudflared on controller
+  ansible.builtin.include_tasks:
+    file: configuring_tunnel_install.yml
+    apply:
+      delegate_to: localhost
+      delegate_facts: true
+  when:
+    - hostvars['localhost'].cloudflared_facts_unique_tunnels | length > 0
+  run_once: true
+
+- name: configuring tunnel | Create tunnels on controller
+  ansible.builtin.include_tasks:
+    file: configuring_tunnel_create.yml
+    apply:
+      delegate_to: localhost
+      delegate_facts: true
+  loop: "{{ hostvars['localhost'].cloudflared_facts_unique_tunnels }}"
+  loop_control:
+    loop_var: cloudflared_item_tunnel
+    label: "{{ cloudflared_item_tunnel.tunnel_name }}"
+  when:
+    - hostvars['localhost'].cloudflared_facts_unique_tunnels | length > 0
+  run_once: true

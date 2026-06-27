@@ -1,0 +1,213 @@
+---
+- name: configuring tunnel install | @localhost | Gather facts
+  ansible.builtin.setup:
+
+- name: configuring tunnel install | @localhost | Check cloudflared
+  ansible.builtin.command:
+    argv:
+      - >-
+        {{
+          cloudflared_controller_binary_path
+          | default(
+            hostvars['localhost'].ansible_facts['user_dir']
+            ~ '/.cloudflared/cloudflared'
+          )
+        }}
+      - --version
+  register: cloudflared_result_tunnel_controller_version
+  changed_when: false
+  failed_when: false
+
+- when:
+    - cloudflared_result_tunnel_controller_version.rc != 0
+  block:
+    - name: configuring tunnel install | @localhost | Validate platform
+      ansible.builtin.assert:
+        that:
+          - >
+            hostvars['localhost'].ansible_facts['system']
+            in cloudflared_controller_asset_platform_mapping
+        fail_msg: >-
+          Unsupported localhost controller platform:
+          {{
+            hostvars['localhost']
+            .ansible_facts['system']
+            | default('UNDEFINED')
+          }}.
+          Supported platforms for GitHub binary installation:
+          {{
+            cloudflared_controller_asset_platform_mapping.keys()
+            | join(', ')
+          }}.
+      vars:
+        cloudflared_controller_asset_platform_mapping:
+          Linux:
+            asset_prefix: cloudflared-linux-
+            asset_suffix: ""
+            download_filename: cloudflared
+            extracted_binary_path: cloudflared
+          Darwin:
+            asset_prefix: cloudflared-darwin-
+            asset_suffix: .tgz
+            download_filename: cloudflared.tgz
+            extracted_binary_path: cloudflared
+
+    - name: configuring tunnel install | @localhost | Validate architecture
+      ansible.builtin.assert:
+        that:
+          - >
+            hostvars['localhost']
+            .ansible_facts['architecture']
+            in cloudflared_controller_asset_arch_mapping
+        fail_msg: >-
+          Unsupported localhost controller architecture:
+          {{
+            hostvars['localhost']
+            .ansible_facts['architecture']
+            | default('UNDEFINED')
+          }}.
+      vars:
+        cloudflared_controller_asset_arch_mapping:
+          x86_64: amd64
+          amd64: amd64
+          aarch64: arm64
+          arm64: arm64
+          armv7l: arm
+          armv6l: arm
+          i386: "386"
+          i686: "386"
+
+    - name: configuring tunnel install | @localhost | Create temporary download directory
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: cloudflared-controller-
+      register: cloudflared_result_tunnel_controller_download_dir
+
+    - name: configuring tunnel install | @localhost | Derive GitHub binary metadata
+      ansible.builtin.set_fact:
+        cloudflared_facts_tunnel_controller_binary_path: >-
+          {{
+            cloudflared_controller_binary_path
+            | default(
+              hostvars['localhost'].ansible_facts['user_dir']
+              ~ '/.cloudflared/cloudflared'
+            )
+          }}
+        cloudflared_facts_tunnel_controller_release_url: >-
+          {{
+            cloudflared_github_base_url
+            ~ '/'
+            ~ cloudflared_github_repository
+            ~ '/releases/latest/download/'
+            ~ cloudflared_facts_tunnel_controller_release_asset
+          }}
+        cloudflared_facts_tunnel_controller_download_filename: >-
+          {{
+            cloudflared_controller_asset_platform_mapping[
+              hostvars['localhost']
+              .ansible_facts['system']
+            ].download_filename
+          }}
+        cloudflared_facts_tunnel_controller_extracted_binary_path: >-
+          {{
+            cloudflared_result_tunnel_controller_download_dir.path
+            ~ '/'
+            ~
+            cloudflared_controller_asset_platform_mapping[
+              hostvars['localhost']
+              .ansible_facts['system']
+            ].extracted_binary_path
+          }}
+      vars:
+        cloudflared_facts_tunnel_controller_release_asset: >-
+          {{
+            cloudflared_controller_asset_platform_mapping[
+              hostvars['localhost']
+              .ansible_facts['system']
+            ].asset_prefix
+            ~
+            cloudflared_controller_asset_arch_mapping[
+              hostvars['localhost']
+              .ansible_facts['architecture']
+            ]
+            ~
+            cloudflared_controller_asset_platform_mapping[
+              hostvars['localhost']
+              .ansible_facts['system']
+            ].asset_suffix
+          }}
+        cloudflared_controller_asset_platform_mapping:
+          Linux:
+            asset_prefix: cloudflared-linux-
+            asset_suffix: ""
+            download_filename: cloudflared
+            extracted_binary_path: cloudflared
+          Darwin:
+            asset_prefix: cloudflared-darwin-
+            asset_suffix: .tgz
+            download_filename: cloudflared.tgz
+            extracted_binary_path: cloudflared
+        cloudflared_controller_asset_arch_mapping:
+          x86_64: amd64
+          amd64: amd64
+          aarch64: arm64
+          arm64: arm64
+          armv7l: arm
+          armv6l: arm
+          i386: "386"
+          i686: "386"
+
+    - name: configuring tunnel install | @localhost | Download cloudflared binary
+      ansible.builtin.get_url:
+        url: >-
+          {{
+            hostvars['localhost']
+            .cloudflared_facts_tunnel_controller_release_url
+          }}
+        dest: "{{ cloudflared_result_tunnel_controller_download_dir.path ~ '/' ~ hostvars['localhost'].cloudflared_facts_tunnel_controller_download_filename }}"
+        mode: "0755"
+
+    - name: configuring tunnel install | @localhost | Extract cloudflared archive
+      ansible.builtin.unarchive:
+        src: "{{ cloudflared_result_tunnel_controller_download_dir.path ~ '/' ~ hostvars['localhost'].cloudflared_facts_tunnel_controller_download_filename }}"
+        dest: "{{ cloudflared_result_tunnel_controller_download_dir.path }}"
+        remote_src: true
+      when:
+        - hostvars['localhost'].ansible_facts['system'] == 'Darwin'
+
+    - name: configuring tunnel install | @localhost | Ensure binary directory exists
+      ansible.builtin.file:
+        path: >-
+          {{
+            hostvars['localhost']
+            .cloudflared_facts_tunnel_controller_binary_path
+            | dirname
+          }}
+        state: directory
+        mode: "0755"
+
+    - name: configuring tunnel install | @localhost | Install binary
+      ansible.builtin.copy:
+        src: >-
+          {{
+            hostvars['localhost']
+            .cloudflared_facts_tunnel_controller_extracted_binary_path
+          }}
+        dest: >-
+          {{
+            hostvars['localhost']
+            .cloudflared_facts_tunnel_controller_binary_path
+          }}
+        mode: "0755"
+        remote_src: true
+
+  always:
+    - name: configuring tunnel install | @localhost | Remove temporary download directory
+      ansible.builtin.file:
+        path: >-
+          {{
+            cloudflared_result_tunnel_controller_download_dir.path
+          }}
+        state: absent
+      when:
+        - cloudflared_result_tunnel_controller_download_dir is defined

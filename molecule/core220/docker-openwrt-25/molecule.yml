@@ -1,0 +1,42 @@
+---
+# skip role name check
+# see https://github.com/ansible/ansible-compat/issues/78
+role_name_check: 1
+
+dependency:
+  name: galaxy
+
+driver:
+  name: docker
+
+platforms:
+  - name: openwrt25
+    image: openwrt/rootfs:x86_64-25.12.3
+    command: /sbin/init
+
+provisioner:
+  name: ansible
+  playbooks:
+    converge: converge.version-latest.yml
+    side_effect: converge.version-latest.yml
+
+scenario:
+  name: docker-openwrt-25
+
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    # The `cloudflared_facts_is_installed` variable will change after `idempotence`
+    # - idempotence
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.version-any.yml
+    - verify
+    - cleanup
+    - destroy
+
+verifier:
+  name: ansible

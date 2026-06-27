@@ -271,10 +271,6 @@
             "default": "docker-debian-13",
             // Consistent with the molecule/core*/* directory
             "options": [
-                "delegated-windows-latest",
-                "delegated-windows-2022",
-                "default-windows-latest",
-                "default-windows-2022",
                 "docker-debian-13",
                 "docker-debian-10",
                 "docker-ubuntu-2404",

@@ -403,10 +403,6 @@
             "description": "Select the Molecule scenario",
             "default": "docker-debian-13",
             "options": [
-                "delegated-windows-latest",
-                "delegated-windows-2022",
-                "default-windows-latest",
-                "default-windows-2022",
                 "docker-debian-13",
                 "docker-debian-10",
                 "docker-ubuntu-2404",

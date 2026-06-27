@@ -284,6 +284,7 @@
                 "docker-ubuntu-2004",
                 "docker-fedora-43",
                 "docker-rockylinux-10",
+                "docker-centos-8",
             ]
         }
     ]

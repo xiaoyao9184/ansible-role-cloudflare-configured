@@ -3,3 +3,9 @@
 - name: installing | Run Debian installation tasks
   ansible.builtin.include_tasks: installing_debian.yml
   when: ansible_facts["os_family"] == "Debian"
+
+- name: installing | Run Red Hat compatible installation tasks for RedHat and Rocky families
+  ansible.builtin.include_tasks: installing_redhat.yml
+  when: >-
+    ansible_facts["os_family"] == "RedHat" or
+    ansible_facts["os_family"] == "Rocky"

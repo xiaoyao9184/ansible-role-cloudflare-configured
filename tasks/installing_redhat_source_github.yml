@@ -1,0 +1,76 @@
+---
+- name: installing redhat | Validate GitHub RPM asset architecture support
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['architecture'] is defined
+      - ansible_facts['architecture'] in cloudflared_github_release_asset_arch_mapping
+    fail_msg: >-
+      Unsupported Red Hat GitHub release architecture:
+      {{ ansible_facts['architecture'] | default('UNDEFINED') }}.
+
+- name: installing redhat | Facted GitHub RPM download metadata
+  ansible.builtin.set_fact:
+    cloudflared_facts_github_release_tag: >-
+      {{
+        'latest'
+        if cloudflared_package_version == 'latest'
+        else cloudflared_package_version
+      }}
+    cloudflared_facts_github_release_asset: >-
+      cloudflared-linux-{{ cloudflared_github_release_asset_arch_mapping[ansible_facts['architecture']] }}.rpm
+
+- name: installing redhat | Build GitHub release download URL
+  ansible.builtin.set_fact:
+    cloudflared_facts_github_release_url: >-
+      {{
+        cloudflared_github_base_url ~ '/' ~
+        cloudflared_github_repository ~ '/releases/' ~
+        ('latest/download/' ~ cloudflared_facts_github_release_asset
+         if cloudflared_facts_github_release_tag == 'latest'
+         else 'download/' ~ cloudflared_facts_github_release_tag ~ '/' ~ cloudflared_facts_github_release_asset)
+      }}
+
+- name: installing redhat | Create temporary directory for GitHub package download
+  become: true
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: cloudflared-github-
+  register: cloudflared_result_github_download_dir
+
+- name: installing redhat | Download cloudflared RPM package from GitHub Releases
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ cloudflared_facts_github_release_url }}"
+    dest: "{{ cloudflared_result_github_download_dir.path }}/{{ cloudflared_facts_github_release_asset }}"
+    mode: "0644"
+    force: "{{ cloudflared_package_version == 'latest' }}"
+  register: cloudflared_result_github_package_download
+  until: "cloudflared_result_github_package_download is not failed"
+  retries: 10
+  delay: 10
+
+- name: installing redhat | Install cloudflared RPM package from GitHub Releases via yum
+  become: true
+  ansible.builtin.yum:
+    name: "{{ cloudflared_result_github_download_dir.path }}/{{ cloudflared_facts_github_release_asset }}"
+    state: present
+    allow_downgrade: true
+    disable_gpg_check: true
+  when: cloudflared_facts_redhat_package_manager == 'yum'
+
+- name: installing redhat | Install cloudflared RPM package from GitHub Releases via dnf
+  become: true
+  ansible.builtin.dnf:
+    name: "{{ cloudflared_result_github_download_dir.path }}/{{ cloudflared_facts_github_release_asset }}"
+    state: present
+    allow_downgrade: true
+    disable_gpg_check: true
+  when: cloudflared_facts_redhat_package_manager == 'dnf'
+
+- name: installing redhat | Remove temporary GitHub RPM download directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ cloudflared_result_github_download_dir.path }}"
+    state: absent
+  when:
+    - cloudflared_result_github_download_dir is defined

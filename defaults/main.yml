@@ -67,6 +67,24 @@ cloudflared_debian_repository_url: >-
     cloudflared_debian_repository_url_channel_mapping[cloudflared_debian_repository_channel]
   }}
 #
+# redhat package source
+#
+# `repository` use rpm repository for install
+# `github` use github releases file for install
+# auto override to `github` if cloudflared package version specified
+cloudflared_redhat_source: repository
+#
+# rpm repository management
+#
+# distribution support tier mapping,
+# it will override by in `vars/` dir
+cloudflared_redhat_distribution_support_tier_mapping: {}
+# distribution/release to package manager mapping,
+# it will override by in `vars/` dir
+cloudflared_redhat_package_manager_distribution_major_mapping: {}
+cloudflared_redhat_repository_url: https://pkg.cloudflare.com/cloudflared.repo
+cloudflared_redhat_repository_path: /etc/yum.repos.d/cloudflared.repo
+#
 # 2. Configuration variables
 #
 # tunnel create settings

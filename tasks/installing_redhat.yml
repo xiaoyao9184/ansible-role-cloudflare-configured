@@ -1,0 +1,134 @@
+---
+- name: installing redhat | Validate Red Hat installation settings
+  ansible.builtin.assert:
+    that:
+      - cloudflared_redhat_source in ['repository', 'github']
+      - cloudflared_redhat_repository_url is string
+      - cloudflared_redhat_repository_url | length > 0
+      - cloudflared_redhat_repository_path is string
+      - cloudflared_redhat_repository_path.startswith("/")
+      - cloudflared_package_version is string
+      - cloudflared_package_version | length > 0
+      - cloudflared_redhat_distribution_support_tier_mapping is mapping
+      - cloudflared_redhat_package_manager_distribution_major_mapping is mapping
+      - cloudflared_github_release_asset_arch_mapping is mapping
+    fail_msg: >-
+      Red Hat installation settings are invalid.
+      Check source selection, repository URL, repository path, package version,
+      support tier mapping, package manager mapping,
+      and GitHub release asset mapping.
+
+- name: installing redhat | Facted Red Hat distribution support tier
+  ansible.builtin.set_fact:
+    cloudflared_facts_redhat_support_tier: >-
+      {{
+        cloudflared_redhat_distribution_support_tier_mapping.get(
+          ansible_facts['distribution'],
+          'unsupported'
+        )
+      }}
+    cloudflared_facts_redhat_distribution_is_supported: >-
+      {{
+        ansible_facts['distribution'] in
+        cloudflared_redhat_distribution_support_tier_mapping
+      }}
+
+- name: installing redhat | Validate target distribution is in supported scope
+  ansible.builtin.assert:
+    that:
+      - cloudflared_facts_redhat_distribution_is_supported
+    fail_msg: >-
+      Unsupported Red Hat distribution for cloudflared installation:
+      {{ ansible_facts['distribution'] | default('UNDEFINED') }}.
+      Supported scope: {{
+        cloudflared_redhat_distribution_support_tier_mapping.keys() | join(', ')
+      }}.
+
+- name: installing redhat | Facted package manager and version mode
+  vars:
+    _distribution_package_manager_mapping: >-
+      {{
+        cloudflared_redhat_package_manager_distribution_major_mapping[
+          ansible_facts['distribution']
+        ]
+      }}
+    _facts_pkg_mgr: "{{ ansible_facts['pkg_mgr'] | default('') }}"
+  ansible.builtin.set_fact:
+    cloudflared_facts_redhat_package_manager: >-
+      {{
+        'dnf'
+        if _facts_pkg_mgr.startswith('dnf')
+        else
+        'yum'
+        if _facts_pkg_mgr == 'yum'
+        else
+        _distribution_package_manager_mapping[
+          ansible_facts['distribution_release']
+        ]
+        if ansible_facts['distribution_release'] in _distribution_package_manager_mapping
+        else
+        _distribution_package_manager_mapping[
+          ansible_facts['distribution_major_version']
+        ]
+        if ansible_facts['distribution_major_version'] in _distribution_package_manager_mapping
+        else
+        _distribution_package_manager_mapping['default']
+      }}
+    cloudflared_facts_version_mode: >-
+      {{
+        cloudflared_package_version
+        if cloudflared_package_version in ['latest', 'any']
+        else 'specific'
+      }}
+
+- name: installing redhat | Validate resolved package manager
+  ansible.builtin.assert:
+    that:
+      - cloudflared_facts_redhat_package_manager in ['yum', 'dnf']
+    fail_msg: >-
+      Unsupported Red Hat package manager:
+      {{ cloudflared_facts_redhat_package_manager | default('UNDEFINED') }}.
+
+- name: installing redhat | Check installed cloudflared version
+  ansible.builtin.command:
+    argv:
+      - rpm
+      - --query
+      - --queryformat
+      - "%{VERSION}"
+      - "{{ cloudflared_package_name }}"
+  register: cloudflared_result_installed_version_query
+  changed_when: false
+  failed_when: cloudflared_result_installed_version_query.rc not in [0, 1]
+
+- name: installing redhat | Facted installed cloudflared version details
+  ansible.builtin.set_fact:
+    cloudflared_facts_is_installed: "{{ cloudflared_result_installed_version_query.rc == 0 }}"
+    cloudflared_facts_installed_version: >-
+      {{
+        cloudflared_result_installed_version_query.stdout
+        if cloudflared_result_installed_version_query.rc == 0
+        else ''
+      }}
+
+- name: installing redhat | Facted Red Hat installation behavior
+  ansible.builtin.set_fact:
+    cloudflared_facts_redhat_install_required: >-
+      {{
+        (cloudflared_facts_version_mode == 'latest') or
+        (cloudflared_facts_version_mode == 'any' and
+         not cloudflared_facts_is_installed) or
+        (cloudflared_facts_version_mode == 'specific' and
+         cloudflared_facts_installed_version != cloudflared_package_version)
+      }}
+    cloudflared_tasks_redhat_source: >-
+      {{
+        'github'
+        if cloudflared_facts_version_mode == 'specific'
+        else cloudflared_redhat_source
+      }}
+
+- name: installing redhat | Install cloudflared using selected source
+  ansible.builtin.include_tasks: >-
+    installing_redhat_source_{{ cloudflared_tasks_redhat_source }}.yml
+  when: cloudflared_facts_redhat_install_required

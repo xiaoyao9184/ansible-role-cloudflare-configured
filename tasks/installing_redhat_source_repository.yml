@@ -1,0 +1,33 @@
+---
+- name: installing redhat | Facted repository installation behavior
+  ansible.builtin.set_fact:
+    cloudflared_facts_redhat_package_spec: "{{ cloudflared_package_name }}"
+    cloudflared_facts_redhat_package_state: >-
+      {{
+        'latest'
+        if cloudflared_facts_version_mode == 'latest'
+        else 'present'
+      }}
+
+- name: installing redhat | Configure Cloudflare RPM repository
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ cloudflared_redhat_repository_url }}"
+    dest: "{{ cloudflared_redhat_repository_path }}"
+    mode: "0644"
+
+- name: installing redhat | Install cloudflared via yum repository
+  become: true
+  ansible.builtin.yum:
+    name: "{{ cloudflared_facts_redhat_package_spec }}"
+    state: "{{ cloudflared_facts_redhat_package_state }}"
+    update_cache: true
+  when: cloudflared_facts_redhat_package_manager == 'yum'
+
+- name: installing redhat | Install cloudflared via dnf repository
+  become: true
+  ansible.builtin.dnf:
+    name: "{{ cloudflared_facts_redhat_package_spec }}"
+    state: "{{ cloudflared_facts_redhat_package_state }}"
+    update_cache: true
+  when: cloudflared_facts_redhat_package_manager == 'dnf'

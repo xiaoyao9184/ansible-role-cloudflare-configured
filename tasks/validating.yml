@@ -40,6 +40,30 @@
       - cloudflared_tunnel_name is string
       - cloudflared_tunnel_credentials_file is string
       - cloudflared_tunnel_token is string
+      - cloudflared_credentials_file_target_path is string
+      - cloudflared_credentials_file_source_mode in ['copy', 'vars', 'token']
+      - cloudflared_credentials_file_source_copy_file is string
+      - cloudflared_credentials_file_source_vars_content is mapping
+      - cloudflared_credentials_file_source_token is string
+      - >-
+        (
+          cloudflared_credentials_file_source_mode == 'copy'
+          and cloudflared_credentials_file_source_copy_file | trim | length > 0
+          and cloudflared_credentials_file_source_vars_content | length == 0
+          and cloudflared_credentials_file_source_token == ''
+        )
+        or
+        (
+          cloudflared_credentials_file_source_mode == 'vars'
+          and cloudflared_credentials_file_source_copy_file == ''
+          and cloudflared_credentials_file_source_token == ''
+        )
+        or
+        (
+          cloudflared_credentials_file_source_mode == 'token'
+          and cloudflared_credentials_file_source_copy_file == ''
+          and cloudflared_credentials_file_source_vars_content | length == 0
+        )
       - cloudflared_config_file_target_path is string
       - cloudflared_config_file_become is boolean
       - cloudflared_config_file_source_mode in ['copy', 'template', 'vars']
@@ -72,6 +96,10 @@
       `cloudflared_tunnel_name` must be a string,
       `cloudflared_tunnel_credentials_file` must be a string,
       `cloudflared_tunnel_token` must be a string.
+      `cloudflared_credentials_file_target_path` must be strings when provided,
+      `cloudflared_credentials_file_source_mode` must be one of `copy`, `vars`, or `token`,
+      only the selected mode inputs may be populated,
+      `cloudflared_credentials_file_source_vars_content` must be a mapping.
       `cloudflared_config_file_target_path` must be strings when provided,
       `cloudflared_config_file_source_mode` must be one of `copy`, `template`, or `vars`,
       only the selected mode inputs may be populated,

@@ -153,6 +153,24 @@ cloudflared_tunnel_credentials_file: ""
 # tunnel token used for generate credentials file
 cloudflared_tunnel_token: ""
 #
+# credentials file settings
+#
+# credentials file destination path
+cloudflared_credentials_file_target_path: "{{ ansible_facts['user_dir'] | default(lookup('ansible.builtin.env', 'HOME'),true) }}/.cloudflared/credentials.json"
+# whether to use become when writing the credentials file
+cloudflared_credentials_file_become: false
+# source mode used to build the credentials file
+# `copy` copies a local source file
+# `vars` serializes a variable mapping as JSON
+# `token` serializes a token value as JSON
+cloudflared_credentials_file_source_mode: token
+# local source file used by `copy` mode
+cloudflared_credentials_file_source_copy_file: ""
+# structured content serialized as JSON by `vars` mode
+cloudflared_credentials_file_source_vars_content: {}
+# base64-encoded JSON token serialized into credentials JSON by `token` mode
+cloudflared_credentials_file_source_token: "{{ cloudflared_tunnel_token }}"
+#
 # config file settings
 #
 # tunnel config destination path

@@ -1,0 +1,5 @@
+---
+collections:
+  - name: community.openwrt
+    version: ">=1.1.0"
+roles: []

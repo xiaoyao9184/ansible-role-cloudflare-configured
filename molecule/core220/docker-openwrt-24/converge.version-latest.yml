@@ -1,0 +1,23 @@
+---
+- name: Converge | latest version
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+  tasks:
+    - name: latest version | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_is_openwrt == true
+          - cloudflared_facts_openwrt_package_manager == 'opkg'
+          - cloudflared_tasks_openwrt_package_manager == 'opkg'
+          - cloudflared_facts_openwrt_package_name == 'cloudflared'
+          - cloudflared_facts_is_installed == false
+          - cloudflared_facts_installed_version == ''
+          - cloudflared_facts_version_mode == 'latest'
+          # opkg
+          - cloudflared_result_openwrt_opkg_install is skipped
+          - cloudflared_result_openwrt_opkg_latest is defined
+          # apk
+          - cloudflared_result_openwrt_apk_install is not defined
+          - cloudflared_result_openwrt_apk_latest is not defined

@@ -414,6 +414,7 @@
                 "docker-amazonlinux-2023",
                 "default-macos-15",
                 "default-windows-2025",
+                "docker-openwrt-24",
             ]
         }
     ]

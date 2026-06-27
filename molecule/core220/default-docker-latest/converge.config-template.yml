@@ -1,0 +1,52 @@
+---
+- name: Converge | config from template
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_installation_mode: docker
+        cloudflared_config_file_target_path: /tmp/cloudflare_configured/cloudflared-template.yml
+        cloudflared_config_file_become: false
+        cloudflared_config_file_source_mode: template
+        cloudflared_config_file_source_template_file: "{{ playbook_dir }}/config/config.yml.j2"
+  tasks:
+    - name: template | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_config_host_type == 'docker'
+
+          - cloudflared_result_config_file_tempfile is defined
+
+          - cloudflared_result_config_file_copy is skipped
+          - cloudflared_result_config_file_template is not skipped
+          - cloudflared_result_config_file_vars is skipped
+
+          - cloudflared_result_config_file_flush is not skipped
+
+    - name: template | inspect target config file
+      ansible.builtin.stat:
+        path: "/tmp/cloudflare_configured/cloudflared-template.yml"
+      register: cloudflared_result_config_file_target_stat
+
+    - name: template | read target config file
+      ansible.builtin.slurp:
+        src: "/tmp/cloudflare_configured/cloudflared-template.yml"
+      register: cloudflared_result_config_file_target_content
+
+    - name: template | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_config_host_type == 'docker'
+          - cloudflared_result_config_file_target_stat.stat.exists
+          - >-
+            (
+              cloudflared_result_config_file_target_content.content
+              | b64decode
+              | from_yaml
+            )
+            ==
+            {
+              'tunnel': '00000000-0000-0000-0000-000000000003',
+              'credentials-file': ansible_facts['user_dir'] ~ '/.cloudflared/00000000-0000-0000-0000-000000000003.json'
+            }

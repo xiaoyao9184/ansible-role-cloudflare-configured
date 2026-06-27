@@ -51,6 +51,9 @@ scenario:
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.version-specific.yml
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.version-any.yml
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.source-github.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.config-vars.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.config-copy.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.config-template.yml
     - verify
     - cleanup
     - destroy

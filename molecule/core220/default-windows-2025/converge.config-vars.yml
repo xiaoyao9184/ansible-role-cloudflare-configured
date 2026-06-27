@@ -1,0 +1,49 @@
+---
+- name: Converge | config from vars
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_package_version: any
+        cloudflared_config_file_target_path: "%TEMP%\\cloudflare_configured\\cloudflared-vars.yml"
+        cloudflared_config_file_become: false
+        cloudflared_config_file_source_mode: vars
+        cloudflared_config_file_source_vars_content:
+          tunnel: 00000000-0000-0000-2025-000000000001
+          credentials-file: C:\Users\ansibleci\.cloudflared\00000000-0000-0000-2025-000000000001.json
+  tasks:
+    - name: vars | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_config_host_type == 'windows'
+
+          - cloudflared_result_config_file_copy is skipped
+          - cloudflared_result_config_file_template is skipped
+          - cloudflared_result_config_file_vars is not skipped
+
+    - name: vars | inspect target config file
+      ansible.windows.win_stat:
+        path: "%TEMP%\\cloudflare_configured\\cloudflared-vars.yml"
+      register: cloudflared_result_config_file_target_stat
+
+    - name: vars | read target config file
+      ansible.windows.slurp:
+        src: "%TEMP%\\cloudflare_configured\\cloudflared-vars.yml"
+      register: cloudflared_result_config_file_target_content
+
+    - name: vars | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_result_config_file_target_stat.stat.exists
+          - >-
+            (
+              cloudflared_result_config_file_target_content.content
+              | b64decode
+              | from_yaml
+            )
+            ==
+            {
+              'tunnel': '00000000-0000-0000-2025-000000000001',
+              'credentials-file': 'C:\\Users\\ansibleci\\.cloudflared\\00000000-0000-0000-2025-000000000001.json'
+            }

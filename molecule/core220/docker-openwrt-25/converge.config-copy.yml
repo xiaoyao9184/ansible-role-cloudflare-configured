@@ -1,0 +1,46 @@
+---
+- name: Converge | config from copy
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_package_version: any
+        cloudflared_config_file_target_path: /tmp/cloudflare_configured/cloudflared-copy.yml
+        cloudflared_config_file_source_mode: copy
+        cloudflared_config_file_source_copy_file: "{{ playbook_dir }}/config/config.yml"
+  tasks:
+    - name: copy | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_config_host_type == 'openwrt'
+
+          - cloudflared_result_config_file_copy is not skipped
+          - cloudflared_result_config_file_template is skipped
+          - cloudflared_result_config_file_vars is skipped
+
+    - name: copy | inspect target config file
+      community.openwrt.stat:
+        path: "/tmp/cloudflare_configured/cloudflared-copy.yml"
+      register: cloudflared_result_config_file_target_stat
+
+    - name: copy | read target config file
+      community.openwrt.slurp:
+        src: "/tmp/cloudflare_configured/cloudflared-copy.yml"
+      register: cloudflared_result_config_file_target_content
+
+    - name: copy | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_result_config_file_target_stat.stat.exists
+          - >-
+            (
+              cloudflared_result_config_file_target_content.content
+              | b64decode
+              | from_yaml
+            )
+            ==
+            {
+              'tunnel': '00000000-0000-0000-2512-000000000002',
+              'credentials-file': '/home/nonroot/.cloudflared/00000000-0000-0000-2512-000000000002.json'
+            }

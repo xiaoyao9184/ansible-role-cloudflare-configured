@@ -1,0 +1,54 @@
+---
+- name: Converge | config from vars
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_installation_mode: docker
+        cloudflared_config_file_target_path: /tmp/cloudflare_configured/cloudflared-vars.yml
+        cloudflared_config_file_become: false
+        cloudflared_config_file_source_mode: vars
+        cloudflared_config_file_source_vars_content:
+          tunnel: 00000000-0000-0000-0000-000000000001
+          credentials-file: /home/nonroot/.cloudflared/00000000-0000-0000-0000-000000000001.json
+  tasks:
+    - name: vars | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_config_host_type == 'docker'
+
+          - cloudflared_result_config_file_tempfile is defined
+
+          - cloudflared_result_config_file_copy is skipped
+          - cloudflared_result_config_file_template is skipped
+          - cloudflared_result_config_file_vars is not skipped
+
+          - cloudflared_result_config_file_flush is not skipped
+
+    - name: vars | inspect target config file
+      ansible.builtin.stat:
+        path: "/tmp/cloudflare_configured/cloudflared-vars.yml"
+      register: cloudflared_result_config_file_target_stat
+
+    - name: vars | read target config file
+      ansible.builtin.slurp:
+        src: "/tmp/cloudflare_configured/cloudflared-vars.yml"
+      register: cloudflared_result_config_file_target_content
+
+    - name: vars | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_config_host_type == 'docker'
+          - cloudflared_result_config_file_target_stat.stat.exists
+          - >-
+            (
+              cloudflared_result_config_file_target_content.content
+              | b64decode
+              | from_yaml
+            )
+            ==
+            {
+              'tunnel': '00000000-0000-0000-0000-000000000001',
+              'credentials-file': '/home/nonroot/.cloudflared/00000000-0000-0000-0000-000000000001.json'
+            }

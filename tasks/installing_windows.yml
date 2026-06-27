@@ -1,0 +1,138 @@
+---
+- name: installing windows | Validate Windows installation settings
+  ansible.builtin.assert:
+    that:
+      - cloudflared_windows_source in ["winget", "github"]
+      - cloudflared_windows_winget_command is string
+      - cloudflared_windows_winget_command | length > 0
+      - cloudflared_windows_winget_package_id is string
+      - cloudflared_windows_winget_package_id | length > 0
+      - cloudflared_windows_binary_candidates is sequence
+      - cloudflared_windows_binary_candidates is not string
+      - cloudflared_windows_binary_candidates | length > 0
+      - cloudflared_windows_github_binary_path is string
+      - cloudflared_windows_github_binary_path is match('^[A-Za-z]:\\\\')
+      - cloudflared_github_release_asset_arch_mapping is mapping
+    fail_msg: >-
+      Windows installation settings are invalid.
+      Check source selection, winget command, package id,
+      binary candidates, GitHub binary path,
+      and GitHub architecture mapping.
+
+- name: installing windows | Facted Windows platform support
+  ansible.builtin.set_fact:
+    cloudflared_facts_windows_distribution_is_supported: >-
+      {{
+        ansible_facts['os_family'] == 'Windows' or
+        ansible_facts.get('system', '') in ['Win32NT', 'Windows']
+      }}
+
+- name: installing windows | Validate target distribution is Windows
+  ansible.builtin.assert:
+    that:
+      - cloudflared_facts_windows_distribution_is_supported
+    fail_msg: >-
+      Unsupported Windows distribution for cloudflared installation:
+      os_family={{ ansible_facts['os_family'] | default('UNDEFINED') }},
+      system={{ ansible_facts['system'] | default('UNDEFINED') }},
+      distribution={{ ansible_facts['distribution'] | default('UNDEFINED') }}.
+
+- name: installing windows | Check candidate cloudflared binary paths
+  ansible.windows.win_stat:
+    path: "{{ item }}"
+  loop: "{{ cloudflared_windows_binary_candidates }}"
+  register: cloudflared_results_windows_binary_candidates
+
+- name: installing windows | Facted installed cloudflared binary path from candidates
+  ansible.builtin.set_fact:
+    cloudflared_facts_windows_binary_path: >-
+      {{
+        (
+          cloudflared_results_windows_binary_candidates.results
+          | selectattr('stat.exists')
+          | map(attribute='stat.path')
+          | list
+          | first
+        )
+        | default('')
+      }}
+
+- name: installing windows | Fallback to PATH lookup for cloudflared binary
+  ansible.windows.win_command:
+    cmd: where.exe cloudflared
+  register: cloudflared_result_windows_binary_lookup
+  changed_when: false
+  failed_when: false
+  when: cloudflared_facts_windows_binary_path == ''
+
+- name: installing windows | Facted resolved cloudflared binary path
+  ansible.builtin.set_fact:
+    cloudflared_facts_windows_binary_path: >-
+      {{
+        cloudflared_result_windows_binary_lookup.stdout_lines[0]
+        if
+          cloudflared_facts_windows_binary_path == '' and
+          cloudflared_result_windows_binary_lookup is defined and
+          cloudflared_result_windows_binary_lookup.rc == 0 and
+          cloudflared_result_windows_binary_lookup.stdout_lines | length > 0
+        else cloudflared_facts_windows_binary_path
+      }}
+
+- name: installing windows | Check installed cloudflared version
+  ansible.windows.win_command:
+    argv:
+      - "{{ cloudflared_facts_windows_binary_path }}"
+      - --version
+  register: cloudflared_result_installed_version_query
+  changed_when: false
+  failed_when: false
+  when: cloudflared_facts_windows_binary_path != ''
+
+- name: installing windows | Facted installed cloudflared version details
+  ansible.builtin.set_fact:
+    cloudflared_facts_is_installed: >-
+      {{
+        cloudflared_facts_windows_binary_path != '' and
+        cloudflared_result_installed_version_query is defined and
+        cloudflared_result_installed_version_query.get('rc') == 0
+      }}
+    cloudflared_facts_installed_version: >-
+      {{
+        (
+          cloudflared_result_installed_version_query.get('stdout', '')
+          | regex_search('[0-9]+(\.[0-9]+){1,3}')
+        )
+        if
+          cloudflared_result_installed_version_query is defined and
+          cloudflared_result_installed_version_query.get('rc') == 0
+        else ''
+      }}
+    cloudflared_facts_version_mode: >-
+      {{
+        cloudflared_package_version
+        if cloudflared_package_version in ['latest', 'any']
+        else 'specific'
+      }}
+
+- name: installing windows | Facted Windows installation behavior
+  ansible.builtin.set_fact:
+    cloudflared_facts_windows_install_required: >-
+      {{
+        (cloudflared_facts_version_mode == 'latest') or
+        (cloudflared_facts_version_mode == 'any' and
+         not cloudflared_facts_is_installed) or
+        (cloudflared_facts_version_mode == 'specific' and
+         cloudflared_facts_installed_version != cloudflared_package_version)
+      }}
+    cloudflared_tasks_windows_source: "{{ cloudflared_windows_source }}"
+
+- name: installing windows | Replace cloudflared using uninstall old
+  ansible.builtin.include_tasks: installing_windows_replace.yml
+  when:
+    - cloudflared_facts_is_installed
+    - cloudflared_facts_windows_install_required
+
+- name: installing windows | Install cloudflared using selected source
+  ansible.builtin.include_tasks: >-
+    installing_windows_source_{{ cloudflared_tasks_windows_source }}.yml
+  when: cloudflared_facts_windows_install_required

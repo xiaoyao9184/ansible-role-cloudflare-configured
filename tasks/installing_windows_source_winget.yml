@@ -1,0 +1,84 @@
+---
+- name: installing windows | Validate winget is available
+  ansible.windows.win_command:
+    argv:
+      - "{{ cloudflared_windows_winget_command }}"
+      - --version
+  register: cloudflared_result_windows_winget_version
+  changed_when: false
+
+- name: installing windows | Facted winget install arguments
+  ansible.builtin.set_fact:
+    cloudflared_facts_windows_winget_install_argv: >-
+      {{
+        [
+          cloudflared_windows_winget_command,
+          'install',
+          '--id',
+          cloudflared_windows_winget_package_id,
+          '--exact',
+          '--source',
+          'winget',
+          '--scope',
+          'machine',
+          '--accept-package-agreements',
+          '--accept-source-agreements',
+          '--disable-interactivity'
+        ]
+        +
+        (
+          ['--version', cloudflared_package_version]
+          if cloudflared_facts_version_mode == 'specific'
+          else ['--no-upgrade']
+        )
+      }}
+  when:
+    - not cloudflared_facts_is_installed or cloudflared_facts_windows_replace_required
+
+- name: installing windows | Install cloudflared via winget when not installed
+  ansible.windows.win_command:
+    argv: "{{ cloudflared_facts_windows_winget_install_argv }}"
+  register: cloudflared_result_windows_winget_install
+  changed_when: true
+  when:
+    - not cloudflared_facts_is_installed or cloudflared_facts_windows_replace_required
+
+- name: installing windows | Facted winget upgrade arguments
+  ansible.builtin.set_fact:
+    cloudflared_facts_windows_winget_upgrade_argv: >-
+      {{
+        [
+          cloudflared_windows_winget_command,
+          'upgrade',
+          '--id',
+          cloudflared_windows_winget_package_id,
+          '--exact',
+          '--source',
+          'winget',
+          '--scope',
+          'machine',
+          '--accept-package-agreements',
+          '--accept-source-agreements',
+          '--disable-interactivity'
+        ]
+        +
+        (
+          ['--version', cloudflared_package_version]
+          if cloudflared_facts_version_mode == 'specific'
+          else ['--include-unknown']
+        )
+      }}
+  when:
+    - cloudflared_facts_is_installed
+    - not cloudflared_facts_windows_replace_required
+
+- name: installing windows | Upgrade cloudflared via winget when already installed
+  ansible.windows.win_command:
+    argv: "{{ cloudflared_facts_windows_winget_upgrade_argv }}"
+  register: cloudflared_result_windows_winget_upgrade
+  changed_when: cloudflared_result_windows_winget_upgrade.rc == 0
+  failed_when: >-
+    cloudflared_result_windows_winget_upgrade.rc not in [0, 2316632107]
+  when:
+    - cloudflared_facts_is_installed
+    - not cloudflared_facts_windows_replace_required

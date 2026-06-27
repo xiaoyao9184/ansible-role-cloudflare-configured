@@ -50,6 +50,9 @@ galaxy_info:
     - name: macOS
       versions:
         - all
+    - name: Windows
+      versions:
+        - all
 
   galaxy_tags:
     - cloudflare

@@ -1,0 +1,57 @@
+---
+- name: installing windows | Validate GitHub release asset architecture support
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['architecture2'] is defined
+      - ansible_facts['architecture2'] in cloudflared_github_release_asset_arch_mapping
+    fail_msg: >-
+      Unsupported Windows GitHub release architecture:
+      {{ ansible_facts['architecture2'] | default('UNDEFINED') }}.
+
+- name: installing windows | Facted GitHub release download metadata
+  ansible.builtin.set_fact:
+    cloudflared_facts_github_release_tag: >-
+      {{
+        'latest'
+        if cloudflared_package_version == 'latest'
+        else cloudflared_package_version
+      }}
+    cloudflared_facts_github_release_asset: >-
+      cloudflared-windows-{{ cloudflared_github_release_asset_arch_mapping[ansible_facts['architecture2']] }}.msi
+
+- name: installing windows | Build GitHub release download URL
+  ansible.builtin.set_fact:
+    cloudflared_facts_github_release_url: >-
+      {{
+        cloudflared_github_base_url ~ '/' ~
+        cloudflared_github_repository ~ '/releases/' ~
+        ('latest/download/' ~ cloudflared_facts_github_release_asset
+         if cloudflared_facts_github_release_tag == 'latest'
+         else 'download/' ~ cloudflared_facts_github_release_tag ~ '/' ~ cloudflared_facts_github_release_asset)
+      }}
+
+- name: installing windows | Create temporary directory for GitHub package download
+  ansible.windows.win_tempfile:
+    state: directory
+    prefix: cloudflared-github-
+  register: cloudflared_result_github_download_dir
+
+- name: installing windows | Download cloudflared Windows package from GitHub Releases
+  ansible.windows.win_get_url:
+    url: "{{ cloudflared_facts_github_release_url }}"
+    dest: "{{ cloudflared_result_github_download_dir.path }}\\{{ cloudflared_facts_github_release_asset }}"
+    force: "{{ cloudflared_package_version == 'latest' }}"
+  register: cloudflared_result_github_package_download
+
+- name: installing windows | Install cloudflared Windows package from GitHub Releases
+  ansible.windows.win_package:
+    path: "{{ cloudflared_result_github_download_dir.path }}\\{{ cloudflared_facts_github_release_asset }}"
+    state: present
+  register: cloudflared_result_github_package_install
+
+- name: installing windows | Remove temporary GitHub package download directory
+  ansible.windows.win_file:
+    path: "{{ cloudflared_result_github_download_dir.path }}"
+    state: absent
+  when:
+    - cloudflared_result_github_download_dir is defined

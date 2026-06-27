@@ -13,3 +13,7 @@
 - name: installing | Run macOS installation tasks
   ansible.builtin.include_tasks: installing_macos.yml
   when: ansible_facts["os_family"] == "Darwin"
+
+- name: installing | Run Windows installation tasks
+  ansible.builtin.include_tasks: installing_windows.yml
+  when: ansible_facts["os_family"] == "Windows"

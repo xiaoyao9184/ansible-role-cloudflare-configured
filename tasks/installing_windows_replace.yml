@@ -1,0 +1,91 @@
+---
+- name: installing windows | Query installed cloudflared package entries
+  ansible.windows.win_shell: |
+    $paths = @(
+      'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+      'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+    )
+
+    $items = @(
+      Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
+        Where-Object { $_.DisplayName -eq 'cloudflared' } |
+        ForEach-Object {
+          [PSCustomObject]@{
+            ProductId = [string]$_.PSChildName
+            WindowsInstaller = ($_.WindowsInstaller -eq 1)
+            WinGetPackageIdentifier = [string]$_.WinGetPackageIdentifier
+          }
+        }
+    )
+
+    if ($items.Count -eq 1) {
+      "[{0}]" -f ($items[0] | ConvertTo-Json -Compress)
+    } else {
+      $items | ConvertTo-Json -Compress
+    }
+  register: cloudflared_result_windows_installed_packages
+  changed_when: false
+
+- name: installing windows | Facted installed cloudflared package entries
+  ansible.builtin.set_fact:
+    cloudflared_facts_windows_installed_packages: >-
+      {{
+        (
+          cloudflared_result_windows_installed_packages.stdout | trim | from_json
+        )
+        if cloudflared_result_windows_installed_packages.stdout | trim | length > 0
+        else []
+      }}
+
+- name: installing windows | Facted installed cloudflared package types
+  ansible.builtin.set_fact:
+    cloudflared_facts_windows_installed_winget_packages: >-
+      {{
+        cloudflared_facts_windows_installed_packages
+        | rejectattr('WinGetPackageIdentifier', 'equalto', '')
+        | list
+      }}
+    cloudflared_facts_windows_installed_msi_product_ids: >-
+      {{
+        cloudflared_facts_windows_installed_packages
+        | selectattr('WindowsInstaller', 'equalto', true)
+        | map(attribute='ProductId')
+        | list
+      }}
+
+- name: installing windows | Facted Windows replacement behavior
+  ansible.builtin.set_fact:
+    cloudflared_facts_windows_replace_required: >-
+      {{
+        cloudflared_facts_windows_install_required and
+        cloudflared_facts_is_installed
+      }}
+
+- name: installing windows | Uninstall installed cloudflared via winget before replacement
+  ansible.windows.win_command:
+    argv:
+      - "{{ cloudflared_windows_winget_command }}"
+      - uninstall
+      - --id
+      - "{{ cloudflared_windows_winget_package_id }}"
+      - --exact
+      - --source
+      - winget
+      - --all
+      - --disable-interactivity
+      - --accept-source-agreements
+  register: cloudflared_result_windows_winget_uninstall
+  changed_when: true
+  when:
+    - cloudflared_facts_windows_replace_required
+    - cloudflared_facts_windows_installed_winget_packages | length > 0
+
+- name: installing windows | Uninstall installed cloudflared MSI packages before replacement
+  ansible.windows.win_package:
+    product_id: "{{ item }}"
+    state: absent
+  loop: "{{ cloudflared_facts_windows_installed_msi_product_ids }}"
+  register: cloudflared_results_windows_msi_uninstall
+  when:
+    - cloudflared_facts_windows_replace_required
+    - cloudflared_facts_windows_installed_msi_product_ids | length > 0

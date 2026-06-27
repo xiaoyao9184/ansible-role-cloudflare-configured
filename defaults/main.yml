@@ -101,6 +101,22 @@ cloudflared_macos_binary_candidates:
   - /usr/local/bin/cloudflared
 cloudflared_macos_github_binary_path: /usr/local/bin/cloudflared
 #
+# windows package source
+#
+# `winget` use Windows Package Manager for install
+# `github` use github releases file for install
+# auto override to `github` if cloudflared package version specified
+cloudflared_windows_source: winget
+#
+# winget package management
+#
+cloudflared_windows_winget_command: winget
+cloudflared_windows_winget_package_id: Cloudflare.cloudflared
+cloudflared_windows_binary_candidates:
+  - C:\Program Files\cloudflared\cloudflared.exe
+  - C:\Program Files (x86)\cloudflared\cloudflared.exe
+cloudflared_windows_github_binary_path: C:\Program Files\cloudflared\cloudflared.exe
+#
 # 2. Configuration variables
 #
 # tunnel create settings

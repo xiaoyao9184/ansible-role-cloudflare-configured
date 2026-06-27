@@ -34,6 +34,9 @@ scenario:
     # The `cloudflared_facts_is_installed` variable will change after `idempotence`
     # - idempotence
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.version-any.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.credentials-vars.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.credentials-copy.yml
+    - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.credentials-token.yml
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.config-vars.yml
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.config-copy.yml
     - side_effect ${MOLECULE_SCENARIO_DIRECTORY}/converge.config-template.yml

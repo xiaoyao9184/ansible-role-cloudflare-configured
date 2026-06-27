@@ -413,6 +413,7 @@
                 "docker-debian-13",
                 "docker-debian-10",
                 "docker-ubuntu-2404",
+                "docker-ubuntu-2004",
             ]
         }
     ]

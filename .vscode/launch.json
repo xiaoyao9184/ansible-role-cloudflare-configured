@@ -414,6 +414,7 @@
                 "default-macos-26",
                 "default-macos-14",
                 "docker-debian-13",
+                "docker-debian-10",
             ]
         }
     ]

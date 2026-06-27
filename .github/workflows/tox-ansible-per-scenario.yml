@@ -102,6 +102,8 @@ jobs:
         env:
           MOLECULE_OPTIONS: ${{ inputs.molecule_options }}
           MOLECULE_SCENARIO_NAME: ${{ inputs.scenario }}
+          CLOUDFLARE_TUNNEL_CERT: ${{ secrets.CLOUDFLARE_TUNNEL_CERT }}
+          CLOUDFLARE_TUNNEL_NAME: ansible-role-cloudflare-configured-test-tunnel-${{ matrix.entry.scenario_name }}-${{ matrix.entry.tox_env }}
         run: |
           set +e
 
@@ -378,8 +380,11 @@ jobs:
 
           MOLECULE_OPTIONS='${{ inputs.molecule_options }}'
           MOLECULE_SCENARIO_NAME='${{ inputs.scenario }}'
+          CLOUDFLARE_TUNNEL_CERT='${{ secrets.CLOUDFLARE_TUNNEL_CERT }}'
+          CLOUDFLARE_TUNNEL_NAME='ansible-role-cloudflare-configured-test-tunnel-${{ matrix.entry.scenario_name }}-${{ matrix.entry.tox_env }}'
 
           export MOLECULE_OPTIONS MOLECULE_SCENARIO_NAME
+          export CLOUDFLARE_TUNNEL_CERT CLOUDFLARE_TUNNEL_NAME
 
           set +e
 

@@ -1,0 +1,76 @@
+---
+# Used only for Debian os family
+
+cloudflared_github_release_asset_arch_mapping:
+  x86_64: amd64
+  amd64: amd64
+  aarch64: arm64
+  arm64: arm64
+  armv7l: armhf
+  armv6l: armhf
+  i386: 386
+  i686: 386
+
+cloudflared_debian_repository_keyring_codename_mapping:
+  # debian
+  wheezy: /etc/apt/trusted.gpg.d/cloudflared.gpg       # Debian 7
+  stretch: /etc/apt/trusted.gpg.d/cloudflared.gpg      # Debian 9
+  jessie: /etc/apt/trusted.gpg.d/cloudflared.gpg       # Debian 8
+  buster: /etc/apt/trusted.gpg.d/cloudflared.gpg       # Debian 10
+  bullseye: /etc/apt/keyrings/cloudflared.gpg    # Debian 11
+  bookworm: /etc/apt/keyrings/cloudflared.gpg    # Debian 12
+  trixie: /etc/apt/keyrings/cloudflared.gpg      # Debian 13
+
+  # ubuntu
+  trusty: /etc/apt/trusted.gpg.d/cloudflared.gpg       # 14.04
+  xenial: /etc/apt/trusted.gpg.d/cloudflared.gpg       # 16.04
+  yakkety: /etc/apt/trusted.gpg.d/cloudflared.gpg      # 16.10
+  zesty: /etc/apt/trusted.gpg.d/cloudflared.gpg        # 17.04
+  artful: /etc/apt/trusted.gpg.d/cloudflared.gpg       # 17.10
+  bionic: /etc/apt/trusted.gpg.d/cloudflared.gpg       # 18.04
+  cosmic: /etc/apt/trusted.gpg.d/cloudflared.gpg       # 18.10
+  disco: /etc/apt/trusted.gpg.d/cloudflared.gpg        # 19.04
+  eoan: /etc/apt/trusted.gpg.d/cloudflared.gpg         # 19.10
+  focal: /etc/apt/trusted.gpg.d/cloudflared.gpg        # 20.04
+  groovy: /etc/apt/trusted.gpg.d/cloudflared.gpg       # 20.10
+  hirsute: /etc/apt/trusted.gpg.d/cloudflared.gpg      # 21.04
+  impish: /etc/apt/keyrings/cloudflared.gpg      # 21.10
+  jammy: /etc/apt/keyrings/cloudflared.gpg       # 22.04
+  kinetic: /etc/apt/keyrings/cloudflared.gpg     # 22.10
+  lunar: /etc/apt/keyrings/cloudflared.gpg       # 23.04
+  mantic: /etc/apt/keyrings/cloudflared.gpg      # 23.10
+  noble: /etc/apt/keyrings/cloudflared.gpg       # 24.04
+  oracular: /etc/apt/keyrings/cloudflared.gpg    # 24.10
+  plucky: /etc/apt/keyrings/cloudflared.gpg      # 25.04
+
+cloudflared_debian_repository_format_codename_mapping:
+  # debian
+  wheezy: list       # Debian 7
+  stretch: list      # Debian 9
+  jessie: list       # Debian 8
+  buster: list       # Debian 10
+  bullseye: sources   # Debian 11
+  bookworm: sources   # Debian 12
+  trixie: sources     # Debian 13
+
+  # ubuntu
+  trusty: list       # 14.04
+  xenial: list       # 16.04
+  yakkety: list      # 16.10
+  zesty: list        # 17.04
+  artful: list       # 17.10
+  bionic: list       # 18.04
+  cosmic: list       # 18.10
+  disco: list        # 19.04
+  eoan: list         # 19.10
+  focal: list        # 20.04
+  groovy: list       # 20.10
+  hirsute: list      # 21.04
+  impish: sources     # 21.10
+  jammy: sources      # 22.04
+  kinetic: sources    # 22.10
+  lunar: sources      # 23.04
+  mantic: sources     # 23.10
+  noble: sources      # 24.04
+  oracular: sources   # 24.10
+  plucky: sources     # 25.04

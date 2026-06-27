@@ -1,0 +1,114 @@
+---
+- name: installing debian | Validate Debian installation settings
+  ansible.builtin.assert:
+    that:
+      - cloudflared_debian_source in ["repository", "github"]
+      - cloudflared_debian_repository_keyring_url is string
+      - cloudflared_debian_repository_keyring is string
+      - cloudflared_debian_repository_format is string
+      - cloudflared_debian_repository_channel in ["stable", "nightly"]
+      - cloudflared_debian_repository_filename is string
+      - cloudflared_debian_repository_suite is string
+      - cloudflared_debian_repository_component is string
+    fail_msg: >-
+      Debian installation settings are invalid.
+      Check package source,
+      repository key URL,
+      repository key ring,
+      repository format,
+      repository channel,
+      repository filename,
+      repository suite,
+      repository component.
+
+- name: installing debian | Validate requested repository keyring
+  ansible.builtin.assert:
+    that:
+      - cloudflared_debian_repository_keyring == "MAPPING" or
+        cloudflared_debian_repository_keyring | length == 0 or
+        cloudflared_debian_repository_keyring is match('^/.*') or
+        cloudflared_debian_repository_keyring is match('^https?://.*')
+    fail_msg: >-
+      cloudflared_debian_repository_keyring must be MAPPING, an absolute path,
+      a URL, or an empty string.
+
+- name: installing debian | Validate MAPPING keyring codename mapping
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution_release'] is defined
+      - ansible_facts['distribution_release'] in cloudflared_debian_repository_keyring_codename_mapping
+      - cloudflared_debian_repository_keyring_codename_mapping[ansible_facts['distribution_release']] is string
+      - cloudflared_debian_repository_keyring_codename_mapping[ansible_facts['distribution_release']] | length > 0
+    fail_msg: >-
+      cloudflared_debian_repository_keyring=MAPPING requires a valid mapping for
+      ansible_facts['distribution_release']={{ ansible_facts['distribution_release'] | default('UNDEFINED') }}
+      in cloudflared_debian_repository_keyring_codename_mapping.
+  when: cloudflared_debian_repository_keyring == "MAPPING"
+
+- name: installing debian | Validate requested repository format
+  ansible.builtin.assert:
+    that:
+      - cloudflared_debian_repository_format in ["MAPPING", "list", "sources"]
+    fail_msg: >-
+      cloudflared_debian_repository_format must be one of MAPPING, list, or sources.
+
+- name: installing debian | Validate MAPPING format codename mapping
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution_release'] is defined
+      - ansible_facts['distribution_release'] in cloudflared_debian_repository_format_codename_mapping
+      - cloudflared_debian_repository_format_codename_mapping[ansible_facts['distribution_release']] in ["list", "sources"]
+    fail_msg: >-
+      cloudflared_debian_repository_format=MAPPING requires a valid mapping for
+      ansible_facts['distribution_release']={{ ansible_facts['distribution_release'] | default('UNDEFINED') }}
+      in cloudflared_debian_repository_format_codename_mapping.
+  when: cloudflared_debian_repository_format == "MAPPING"
+
+- name: installing debian | Check installed cloudflared version
+  ansible.builtin.command:
+    argv:
+      - dpkg-query
+      - --showformat=${Version}
+      - --show
+      - "{{ cloudflared_package_name }}"
+  register: cloudflared_result_installed_version_query
+  changed_when: false
+  failed_when: cloudflared_result_installed_version_query.rc not in [0, 1]
+
+- name: installing debian | Facted installed cloudflared version details
+  ansible.builtin.set_fact:
+    cloudflared_facts_is_installed: "{{ cloudflared_result_installed_version_query.rc == 0 }}"
+    cloudflared_facts_installed_version: >-
+      {{
+        cloudflared_result_installed_version_query.stdout
+        if cloudflared_result_installed_version_query.rc == 0
+        else ""
+      }}
+    cloudflared_facts_version_mode: >-
+      {{
+        cloudflared_package_version
+        if cloudflared_package_version in ["latest", "any"]
+        else "specific"
+      }}
+
+- name: installing debian | Facted Debian installation behavior
+  ansible.builtin.set_fact:
+    cloudflared_facts_debian_install_required: >-
+      {{
+        (cloudflared_facts_version_mode == "latest") or
+        (cloudflared_facts_version_mode == "any" and
+         not cloudflared_facts_is_installed) or
+        (cloudflared_facts_version_mode == "specific" and
+         cloudflared_facts_installed_version != cloudflared_package_version)
+      }}
+    cloudflared_tasks_debian_source: >-
+      {{
+        "github"
+        if cloudflared_facts_version_mode == "specific"
+        else cloudflared_debian_source
+      }}
+
+- name: installing debian | Install cloudflared using selected source
+  ansible.builtin.include_tasks: >-
+    installing_debian_source_{{ cloudflared_tasks_debian_source }}.yml
+  when: cloudflared_facts_debian_install_required

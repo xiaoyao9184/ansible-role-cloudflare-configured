@@ -1,0 +1,65 @@
+---
+- name: installing debian | Validate GitHub release asset architecture support
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['architecture'] is defined
+      - ansible_facts['architecture'] in cloudflared_github_release_asset_arch_mapping
+    fail_msg: >-
+      Unsupported Debian GitHub release architecture:
+      {{ ansible_facts['architecture'] | default('UNDEFINED') }}.
+
+- name: installing debian | Facted GitHub release download metadata
+  ansible.builtin.set_fact:
+   cloudflared_facts_github_release_tag: >-
+      {{
+        'latest'
+        if cloudflared_package_version == 'latest'
+        else cloudflared_package_version
+      }}
+   cloudflared_facts_github_release_asset: >-
+      cloudflared-linux-{{cloudflared_github_release_asset_arch_mapping[ansible_facts['architecture']] }}.deb
+
+- name: installing debian | Build GitHub release download URL
+  ansible.builtin.set_fact:
+   cloudflared_facts_github_release_url: >-
+      {{
+       cloudflared_github_base_url ~ '/' ~
+       cloudflared_github_repository ~ '/releases/' ~
+        ('latest/download/' ~ cloudflared_facts_github_release_asset
+         if cloudflared_facts_github_release_tag == 'latest'
+         else 'download/' ~ cloudflared_facts_github_release_tag ~ '/' ~ cloudflared_facts_github_release_asset)
+      }}
+
+- name: installing debian | Create temporary directory for GitHub package download
+  become: true
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: cloudflared-github-
+  register: cloudflared_result_github_download_dir
+
+- name: installing debian | Download cloudflared Debian package from GitHub Releases
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ cloudflared_facts_github_release_url }}"
+    dest: "{{ cloudflared_result_github_download_dir.path }}/{{ cloudflared_facts_github_release_asset }}"
+    mode: "0644"
+    force: "{{ cloudflared_package_version == 'latest' }}"
+  register: cloudflared_result_github_package_download
+  until: "cloudflared_result_github_package_download is not failed"
+  retries: 10
+  delay: 10
+
+- name: installing debian | Install cloudflared Debian package from GitHub Releases
+  become: true
+  ansible.builtin.apt:
+    deb: "{{ cloudflared_result_github_download_dir.path }}/{{ cloudflared_facts_github_release_asset }}"
+    state: present
+    allow_downgrade: "{{ cloudflared_facts_version_mode == 'specific' }}"
+
+- name: installing debian | Remove temporary GitHub package download directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ cloudflared_result_github_download_dir.path }}"
+    state: absent
+  when:
+    - cloudflared_result_github_download_dir is defined

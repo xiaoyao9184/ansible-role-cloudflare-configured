@@ -1,0 +1,7 @@
+---
+- name: installing debian | Use repository key URL directly without persistent key file
+  ansible.builtin.debug:
+    msg: >-
+      Using repository key URL directly for Debian repository configuration:
+      {{ cloudflared_debian_repository_keyring_url }}
+  changed_when: false

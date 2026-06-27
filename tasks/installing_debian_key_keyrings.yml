@@ -1,0 +1,18 @@
+---
+- name: installing debian | Ensure /etc/apt/keyrings directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ cloudflared_facts_debian_repository_signed_by | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: installing debian | Manage signing key in /etc/apt/keyrings directly
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ cloudflared_debian_repository_keyring_url }}"
+    dest: "{{ cloudflared_facts_debian_repository_signed_by }}"
+    mode: "0644"
+  register: cloudflared_result_debian_key
+  until: "cloudflared_result_debian_key is not failed"
+  retries: 10
+  delay: 10

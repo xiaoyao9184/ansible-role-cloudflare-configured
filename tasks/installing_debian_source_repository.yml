@@ -1,0 +1,90 @@
+---
+- name: installing debian | Facted key and repository task
+  vars:
+    _resolved_key_ring: >-
+      {{
+        cloudflared_debian_repository_keyring_codename_mapping[ansible_facts['distribution_release']]
+        if cloudflared_debian_repository_keyring == "MAPPING"
+        else cloudflared_debian_repository_keyring
+      }}
+  ansible.builtin.set_fact:
+    cloudflared_tasks_debian_key: >-
+      {{
+        "trusted_gpg_d"
+        if _resolved_key_ring.startswith("/etc/apt/trusted.gpg.d/")
+        else
+        "keyrings"
+        if _resolved_key_ring.startswith("/etc/apt/keyrings/")
+        else
+        "direct"
+        if _resolved_key_ring | length == 0 or
+           _resolved_key_ring is match('^https?://.*')
+        else "direct"
+      }}
+    cloudflared_tasks_debian_repository: >-
+      {{
+        cloudflared_debian_repository_format_codename_mapping[ansible_facts['distribution_release']]
+        if cloudflared_debian_repository_format == "MAPPING"
+        else cloudflared_debian_repository_format
+      }}
+    cloudflared_facts_debian_repository_signed_by: >-
+      {{
+        cloudflared_debian_repository_keyring_url
+        if _resolved_key_ring | length == 0
+        else _resolved_key_ring
+      }}
+
+- name: installing debian | Configure key using include tasks
+  ansible.builtin.include_tasks: >-
+    installing_debian_key_{{ cloudflared_tasks_debian_key }}.yml
+
+- name: installing debian | Configure repository using include tasks
+  ansible.builtin.include_tasks: >-
+    installing_debian_repository_{{ cloudflared_tasks_debian_repository }}.yml
+
+- name: installing debian | Refresh apt cache after repository changes
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 0
+  when: >-
+    (cloudflared_result_debian_list_repository is defined and
+    cloudflared_result_debian_list_repository.changed) or
+    (cloudflared_result_debian_sources_repository_1 is defined and
+    cloudflared_result_debian_sources_repository_1.changed) or
+    (cloudflared_result_debian_sources_repository_2 is defined and
+    cloudflared_result_debian_sources_repository_2.changed)
+
+- name: installing debian | Facted apt installation behavior
+  ansible.builtin.set_fact:
+    cloudflared_facts_debian_package_spec: >-
+      {{
+        cloudflared_package_name ~ "=" ~ cloudflared_package_version
+        if cloudflared_facts_version_mode == "specific"
+        else cloudflared_package_name
+      }}
+    cloudflared_facts_debian_package_state: >-
+      {{
+        "latest"
+        if cloudflared_facts_version_mode == "latest"
+        else "present"
+      }}
+
+- name: installing debian | Install cloudflared from repository (ansible-core >= 2.12)
+  become: true
+  ansible.builtin.apt:
+    name: "{{ cloudflared_facts_debian_package_spec }}"
+    state: "{{ cloudflared_facts_debian_package_state }}"
+    allow_downgrade: "{{ cloudflared_facts_version_mode == 'specific' }}"
+    update_cache: false
+  when: ansible_version.full is version("2.12", ">=")
+
+- name: installing debian | Install package using apt-get fallback (ansible-core < 2.12)
+  ansible.builtin.command:
+    cmd: >
+      apt-get install -y
+      --allow-downgrades
+      {{ cloudflared_facts_debian_package_spec }}
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  when: ansible_version.full is version("2.12", "<")

@@ -1,0 +1,13 @@
+---
+- name: installing debian | Add Cloudflare repository using apt_repository
+  become: true
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by={{ cloudflared_facts_debian_repository_signed_by }}]
+      {{ cloudflared_debian_repository_url }}
+      {{ cloudflared_debian_repository_suite }}
+      {{ cloudflared_debian_repository_component }}
+    filename: "{{ cloudflared_debian_repository_filename }}"
+    state: present
+    update_cache: false
+  register: cloudflared_result_debian_list_repository

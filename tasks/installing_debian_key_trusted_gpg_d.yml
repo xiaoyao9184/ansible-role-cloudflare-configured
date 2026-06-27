@@ -1,0 +1,26 @@
+---
+- name: installing debian | Ensure trusted.gpg.d directory exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ cloudflared_facts_debian_repository_signed_by | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: installing debian | Install signing key via apt_key with trusted.gpg.d fallback
+  become: true
+  block:
+    - name: installing debian | Add Cloudflare signing key using apt_key
+      ansible.builtin.apt_key:
+        url: "{{ cloudflared_debian_repository_keyring_url }}"
+        keyring: "{{ cloudflared_facts_debian_repository_signed_by }}"
+        state: present
+  rescue:
+    - name: installing debian | Fallback to managing trusted.gpg.d key file directly
+      ansible.builtin.get_url:
+        url: "{{ cloudflared_debian_repository_keyring_url }}"
+        dest: "{{ cloudflared_facts_debian_repository_signed_by }}"
+        mode: "0644"
+      register: cloudflared_result_debian_key_url
+      until: "cloudflared_result_debian_key_url is not failed"
+      retries: 10
+      delay: 10

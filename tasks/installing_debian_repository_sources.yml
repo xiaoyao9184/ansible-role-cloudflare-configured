@@ -1,0 +1,55 @@
+---
+
+- name: installing debian | Validate deb822 repository support
+  ansible.builtin.assert:
+    that:
+      - ansible_version.full is version("2.15", ">=")
+    fail_msg: >-
+      cloudflared_debian_repository_format=sources use deb822 repository format
+      which requires ansible-core 2.15 or newer.
+  when: cloudflared_tasks_debian_repository == "sources"
+
+- when:
+    - ansible_version.full is version("2.20", "<")
+  block:
+    - name: installing debian | Install python3-debian package (ansible-core < 2.20)
+      become: true
+      ansible.builtin.apt:
+        update_cache: true
+        name: python3-debian
+        state: present
+
+    - name: installing debian | Add Cloudflare repository using deb822_repository (ansible-core < 2.20)
+      become: true
+      ansible.builtin.deb822_repository:
+        name: "{{ cloudflared_debian_repository_filename }}"
+        types:
+          - deb
+        uris:
+          - "{{ cloudflared_debian_repository_url }}"
+        suites:
+          - "{{ cloudflared_debian_repository_suite }}"
+        components:
+          - "{{ cloudflared_debian_repository_component }}"
+        signed_by: "{{ cloudflared_facts_debian_repository_signed_by }}"
+        state: present
+      register: cloudflared_result_debian_sources_repository_1
+
+- name: installing debian | Add Cloudflare repository using deb822_repository (ansible-core >= 2.20)
+  become: true
+  ansible.builtin.deb822_repository:
+    name: "{{ cloudflared_debian_repository_filename }}"
+    types:
+      - deb
+    uris:
+      - "{{ cloudflared_debian_repository_url }}"
+    suites:
+      - "{{ cloudflared_debian_repository_suite }}"
+    components:
+      - "{{ cloudflared_debian_repository_component }}"
+    signed_by: "{{ cloudflared_facts_debian_repository_signed_by }}"
+    state: present
+    # Install python-debian package if not present, needed for ansible-core >= 2.20
+    install_python_debian: true
+  register: cloudflared_result_debian_sources_repository_2
+  when: ansible_version.full is version("2.20", ">=")

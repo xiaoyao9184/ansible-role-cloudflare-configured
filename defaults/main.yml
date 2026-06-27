@@ -28,6 +28,45 @@ cloudflared_github_repository: cloudflare/cloudflared
 # key is ansible architecture, value is github release asset architecture
 cloudflared_github_release_asset_arch_mapping: {}
 #
+# debian package source
+#
+# `repository` use apt repository for install
+# `github` use github releases file for install
+# auto override to `github` if cloudflared package version specified
+cloudflared_debian_source: repository
+#
+# apt key management
+#
+# keyrings: manage /etc/apt/keyrings directly
+cloudflared_debian_repository_keyring_url: https://pkg.cloudflare.com/cloudflare-main.gpg
+# `<path>` like `/etc/apt/trusted.gpg.d/*` use apt_key first fallback to get_url
+# `<path>` like `/etc/apt/keyrings/*` use get_url
+# `<url>` use the key URL directly in the repository (non-persistent)
+# `MAPPING` auto map by system codename
+cloudflared_debian_repository_keyring: MAPPING
+# codename to key ring mapping, it will override by in `vars/` dir
+cloudflared_debian_repository_keyring_codename_mapping: {}
+#
+# apt repository management
+#
+# `list` use apt_repository for .list files
+# `deb822` use deb822_repository for .sources files
+# `MAPPING` auto map by system codename
+cloudflared_debian_repository_format: MAPPING
+# codename to format mapping, it will override by in `vars/` dir
+cloudflared_debian_repository_format_codename_mapping: {}
+cloudflared_debian_repository_channel: stable
+cloudflared_debian_repository_filename: cloudflared
+cloudflared_debian_repository_suite: any
+cloudflared_debian_repository_component: main
+cloudflared_debian_repository_url_channel_mapping:
+  stable: https://pkg.cloudflare.com/cloudflared
+  nightly: https://next.pkg.cloudflare.com/cloudflared
+cloudflared_debian_repository_url: >-
+  {{
+    cloudflared_debian_repository_url_channel_mapping[cloudflared_debian_repository_channel]
+  }}
+#
 # 2. Configuration variables
 #
 # tunnel create settings

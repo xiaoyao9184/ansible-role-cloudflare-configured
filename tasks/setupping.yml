@@ -1,0 +1,35 @@
+---
+# OS-specific setup tasks should be included from this stage file.
+- name: setupping | Detect Windows via connection
+  ansible.builtin.set_fact:
+    cloudflared_facts_is_windows: "{{ ansible_connection in ['winrm', 'psrp'] }}"
+  when: ansible_facts["os_family"] is not defined
+
+- name: setupping | include tasks for Windows systems
+  include_tasks: setupping_unix.yml
+  when:
+    - ansible_facts["os_family"] is not defined
+    - cloudflared_facts_is_windows | default(false)
+
+- name: setupping | include tasks for Unix-like systems
+  include_tasks: setupping_unix.yml
+  when:
+    - ansible_facts["os_family"] is not defined
+    - not (cloudflared_facts_is_windows | default(false))
+
+- name: setupping | Include OS-specific vars
+  ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      files:
+        - "distribution={{ ansible_facts['distribution'] }}+version={{ ansible_facts['distribution_version'] | default('NONE') }}.yml"
+        - "distribution={{ ansible_facts['distribution'] }}+release={{ ansible_facts['distribution_release'] | default('NONE') }}.yml"
+        - "distribution={{ ansible_facts['distribution'] }}+major={{ ansible_facts['distribution_major_version'] }}.yml"
+        - "distribution={{ ansible_facts['distribution'] }}.yml"
+        - "os-family={{ ansible_facts['os_family'] }}.yml"
+        - main.yml
+      paths:
+        - '{{ cloudflared_os_specific_vars_path }}'
+        - 'vars'
+  when:
+    - cloudflared_os_specific_vars_included | default(true)

@@ -1,0 +1,59 @@
+---
+# OS-specific setup tasks should be included from this stage file.
+- name: validating | Validate package settings
+  ansible.builtin.assert:
+    that:
+      - cloudflared_package_name is string
+      - cloudflared_package_name | trim | length > 0
+      - cloudflared_package_version is string
+      - cloudflared_package_version | trim | length > 0
+      - >-
+        cloudflared_package_version in ["latest", "any"]
+        or
+        (
+          cloudflared_package_version
+          is match('^[0-9]+(\\.[0-9]+){1,3}$')
+        )
+    fail_msg: >-
+      `cloudflared_package_name` must be a non-empty string,
+      `cloudflared_package_version` must be one of: `latest`, `any`,
+      or a dotted version string such as `2026.2.0`.
+
+- name: validating | Validate installation settings
+  ansible.builtin.assert:
+    that:
+      - cloudflared_github_base_url is string
+      - cloudflared_github_base_url | trim | length > 0
+      - cloudflared_github_repository is string
+      - cloudflared_github_repository | trim | length > 0
+      - cloudflared_github_release_asset_arch_mapping is mapping
+    fail_msg: >-
+      `cloudflared_github_base_url` must be a non-empty string,
+      `cloudflared_github_repository` must be a non-empty string,
+      `cloudflared_github_release_asset_arch_mapping` must be a mapping.
+
+- name: validating | Validate configuration settings
+  ansible.builtin.assert:
+    that:
+      - cloudflared_controller_binary_path is string
+      - cloudflared_account_cert_file is string
+      - cloudflared_tunnel_name is string
+      - cloudflared_tunnel_credentials_file is string
+      - cloudflared_tunnel_token is string
+    fail_msg: >-
+      `cloudflared_controller_binary_path` must be a string,
+      `cloudflared_account_cert_file` must be a string,
+      `cloudflared_tunnel_name` must be a string,
+      `cloudflared_tunnel_credentials_file` must be a string,
+      `cloudflared_tunnel_token` must be a string.
+
+- name: validating | Validate control settings
+  ansible.builtin.assert:
+    that:
+      - cloudflared_service_name is string
+      - cloudflared_service_enabled is boolean
+      - cloudflared_service_state in ["started", "stopped", "restarted", "reloaded"]
+    fail_msg: >-
+      `cloudflared_service_name` must be a string,
+      `cloudflared_service_enabled` must be a boolean,
+      `cloudflared_service_state` must be one of: `started`, `stopped`, `restarted`, `reloaded`.

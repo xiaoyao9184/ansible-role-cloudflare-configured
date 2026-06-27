@@ -1,2 +1,62 @@
 ---
 # defaults file for cloudflare-configured
+#
+# 0. OS-specific variables
+#
+# Define OS-specific vars file for override default
+# If enabled, some variables will be overridden by those in the `vars` path.
+cloudflared_os_specific_vars_included: true
+# Define OS-specific vars path for override default
+cloudflared_os_specific_vars_path: "NONE"
+#
+# Package variables
+#
+cloudflared_package_name: cloudflared
+# `latest` install the latest version
+# `any` install any available version
+# `<version>` install the specified version
+cloudflared_package_version: latest
+#
+# 1. Installation variables
+#
+# base url for github api
+cloudflared_github_base_url: https://github.com
+# repository name
+cloudflared_github_repository: cloudflare/cloudflared
+# ansible architecture to github release asset architecture mapping,
+# it will override by in `vars/` dir
+# key is ansible architecture, value is github release asset architecture
+cloudflared_github_release_asset_arch_mapping: {}
+#
+# 2. Configuration variables
+#
+# tunnel create settings
+#
+# cloudflared binary path on controller node
+cloudflared_controller_binary_path: "~/.cloudflared/cloudflared"
+# account certificate file on controller node
+cloudflared_account_cert_file: ""
+# tunnel name for creation
+cloudflared_tunnel_name: ""
+# tunnel credentials file path for creation on controller node
+cloudflared_tunnel_credentials_file: ""
+#
+# tunnel token settings
+#
+# tunnel token used for generate credentials file
+cloudflared_tunnel_token: ""
+#
+#
+# 3. Control variables
+#
+# logical service name used by native service managers and docker container naming
+# empty string means skip service management
+cloudflared_service_name: cloudflared
+# whether the cloudflared service should be enabled
+cloudflared_service_enabled: true
+# current desired service state
+# `started` ensures the runtime unit is running
+# `stopped` ensures the runtime unit is stopped
+# `restarted` restarts the runtime unit
+# `reloaded` reloads the runtime unit when supported
+cloudflared_service_state: started

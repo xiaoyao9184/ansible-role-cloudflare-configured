@@ -1,2 +1,16 @@
 ---
 # tasks file for cloudflare-configured
+- name: Stage setupping
+  ansible.builtin.include_tasks: setupping.yml
+
+- name: Stage validating
+  ansible.builtin.include_tasks: validating.yml
+
+- name: Stage installing
+  ansible.builtin.include_tasks: installing.yml
+
+- name: Stage configuring
+  ansible.builtin.include_tasks: configuring.yml
+
+- name: Stage controlling
+  ansible.builtin.include_tasks: controlling.yml

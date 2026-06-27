@@ -1,0 +1,4 @@
+---
+# OS-specific setup tasks should be included from this stage file.
+- name: setupping | Gather Windows facts
+  ansible.windows.setup:

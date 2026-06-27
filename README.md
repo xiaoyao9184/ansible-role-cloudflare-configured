@@ -1,227 +1,108 @@
 # cloudflare-configured
 
-`cloudflare-configured` is an Ansible role skeleton focused on test
-environment management. It provides a ready-to-use layout for running Molecule
-scenarios across multiple Python and Ansible Core versions with Pixi, tox,
-tox-ansible, and GitHub Actions.
+`cloudflare-configured` is an Ansible role for installing, configuring, and
+controlling `cloudflared` across a mixed fleet. It supports native package or
+binary installation on Linux, macOS, Windows, and OpenWrt hosts, plus a Docker
+delivery mode for hosts that should run `cloudflared` as a container.
 
-The role itself does not configure a target host yet. Its main value is the
-project structure, pinned compatibility choices, generated dependency files,
-Molecule scenario layout, and CI workflows that make it easier to validate a
-real role against old and new Ansible runtimes.
+The role runs in five stages:
 
-## What This Skeleton Provides
-
-- Pixi environments for Python 3.5 through 3.14.
-- Ansible Core environments from 2.9 through 2.20.
-- Molecule scenarios grouped by core version, for example
-  `molecule/core220/default`.
-- tox configuration for running Molecule directly.
-- tox-ansible configuration for integration-style scenario execution.
-- GitHub Actions workflows for running one scenario or all discovered
-  scenarios.
-- Helper scripts that generate matrix data and temporary tox dependency files.
+1. `setupping`: gather or normalize platform facts and load OS-specific vars.
+2. `validating`: validate role inputs before changing the host.
+3. `installing`: install or update `cloudflared`.
+4. `configuring`: optionally create tunnels, credentials files, and config
+   files.
+5. `controlling`: optionally install/register and control the runtime service.
 
 ## Requirements
 
-Install the following tools on the machine that runs the tests:
+Install the following on the control node or target hosts as needed:
 
-- `pixi`
-- Docker, when running scenarios that use the Docker driver
-- GitHub Actions, if using the provided CI workflows
+- Ansible 2.9 or newer.
+- `community.docker >= 3.6.0` when `cloudflared_installation_mode: docker`.
+- `community.openwrt >= 1.1.0` when managing OpenWrt hosts.
+- Docker on Docker-mode target hosts.
+- Homebrew on macOS hosts when using `cloudflared_macos_source: brew`.
+- winget on Windows hosts when using `cloudflared_windows_source: winget`.
 
-Pixi creates the Python, tox, tox-ansible, Molecule, and Ansible dependencies
-declared in `pixi.toml`.
+Tunnel creation runs on the controller through delegated localhost tasks. When
+you use `cloudflared_account_cert_file` and `cloudflared_tunnel_name`, the role
+checks for a controller-side `cloudflared` binary and automatically downloads a
+usable release binary when it is missing.
 
-## Repository Layout
+## Supported Platforms
 
-```text
-pixi.toml                                 Pixi features, environments, and tasks
-pixi.lock                                 Locked Pixi dependency graph
-tox/py*/tox.ini                           tox Molecule runners by Python version
-tox/py*/tox-ansible.ini                   tox-ansible runners by Python version
-molecule/core*/<scenario>/                Molecule scenarios by Ansible Core version
-scripts/generate_tox_deps.py              Generates pyproject dependency groups for tox
-scripts/generate_tox_matrix.py            Builds GitHub Actions matrix data for tox
-scripts/generate_tox_ansible_galaxy.py    Generates galaxy.yml for tox-ansible
-scripts/generate_tox_ansible_matrix.py    Builds GitHub Actions matrix data for tox-ansible
-scripts/generate_tox_ansible_molecule.py  Generates Molecule scenario files for tox-ansible
-.github/workflows/                        Reusable CI workflows
-```
+The role includes platform-specific installation and service paths for:
 
-The directory name `core220` means Ansible Core `2.20`, `core219` means
-Ansible Core `2.19`, and so on.
+- Debian and Ubuntu.
+- Red Hat family hosts, including Fedora, Enterprise Linux, Rocky Linux, and
+  Amazon Linux 2023.
+- macOS.
+- Windows.
+- OpenWrt with `opkg` or `apk`.
+- Docker.
 
-## Supported Test Matrix
+## Role Variables
 
-Pixi defines standalone Python environments:
+The defaults live in `defaults/main.yml`. The most common variables are listed
+below.
 
-```text
-py35 py36 py37 py38 py39 py310 py311 py312 py313 py314
-```
+## Example Playbooks
 
-It also defines Ansible Core environments:
+For complete runnable examples, use the Molecule scenarios under
+`molecule/core220/` as the primary reference. The `converge.*.yml` files in
+those scenarios demonstrate the supported installation sources, config file
+modes, credentials file modes, tunnel creation workflow, Docker mode, and
+service-control behavior.
 
-```text
-core29  -> ansible 2.9
-core210 -> ansible-base 2.10
-core211 -> ansible-core 2.11
-core212 -> ansible-core 2.12
-core213 -> ansible-core 2.13
-core214 -> ansible-core 2.14
-core215 -> ansible-core 2.15
-core216 -> ansible-core 2.16
-core217 -> ansible-core 2.17
-core218 -> ansible-core 2.18
-core219 -> ansible-core 2.19
-core220 -> ansible-core 2.20
-```
+## Testing
 
-Older Python environments have extra compatibility constraints. Python 3.5 and
-3.6 use requirement files instead of generated Pixi/PyPI dependency groups.
+Users who want validation evidence should review the GitHub Actions workflow
+results for the role. The workflow definitions live under `.github/workflows/`
+and include all-scenario and per-scenario tox and tox-ansible runs.
 
-## Quick Start
+Developers who want to run or debug the same checks locally in VS Code should
+start with `.vscode/tasks.json` and `.vscode/launch.json`.
 
-Run all tox environments configured for one Python version:
+Pixi defines Python and Ansible Core environments, and Molecule scenarios are
+organized under `molecule/core*/<scenario>`.
+
+Run all tox environments for one Python version:
 
 ```bash
 pixi run -e py312 tox
 ```
 
-Run one tox environment and the default Molecule scenario:
+Run one Molecule environment:
 
 ```bash
 pixi run -e py312 tox -e molecule-py3.12-2.20
 ```
 
-Run a specific Molecule scenario through tox:
+Run a specific scenario:
 
 ```bash
-MOLECULE_SCENARIO_NAME=docker pixi run -e py312 tox -e molecule-py3.12-2.20
+MOLECULE_SCENARIO_NAME=docker-debian-13 pixi run -e py312 tox -e molecule-py3.12-2.20
 ```
 
-Pass extra Molecule options:
-
-```bash
-MOLECULE_OPTIONS=--debug pixi run -e py312 tox -e molecule-py3.12-2.20
-```
-
-Run tox-ansible for a Python environment:
+Run tox-ansible:
 
 ```bash
 pixi run -e py312 tox-ansible
 ```
 
-Run one tox-ansible environment:
-
-```bash
-MOLECULE_SCENARIO_NAME=default pixi run -e py312 tox-ansible -e integration-py3.12-2.20
-```
-
-## Molecule Scenarios
-
-Scenarios are stored under every supported Ansible Core directory:
-
-```text
-molecule/core220/default
-molecule/core220/docker
-molecule/core219/default
-molecule/core219/docker
-```
-
-To add a scenario named `podman`, create the same scenario directory under the
-core versions that should support it:
-
-```text
-molecule/core220/podman
-molecule/core219/podman
-```
-
-The matrix scripts discover scenarios by scanning `molecule/core*/*`. If a
-scenario exists only under selected core versions, CI will only run matching
-tox environments for those versions.
-
-## GitHub Actions
-
-The skeleton includes four workflows:
-
-- `Tox Per Scenario`: runs tox for one selected Molecule scenario.
-- `Tox All Scenarios`: discovers all scenarios and calls `Tox Per Scenario`.
-- `Tox Ansible Per Scenario`: runs tox-ansible for one selected scenario.
-- `Tox Ansible All Scenarios`: discovers all scenarios and calls
-  `Tox Ansible Per Scenario`.
-
-The per-scenario workflows accept:
-
-- `scenario`: Molecule scenario name, such as `default` or `docker`.
-- `tox_args`: extra tox or tox-ansible CLI arguments.
-- `molecule_options`: extra options passed to the Molecule command through
-  `MOLECULE_OPTIONS`.
-
-## Helper Scripts
-
-Discover Molecule scenarios:
+Generate helper files and matrix data:
 
 ```bash
 python3 scripts/generate_tox_matrix.py discover-molecule-scenarios
-```
-
-Filter tox environments for one scenario:
-
-```bash
-python3 scripts/generate_tox_matrix.py filter-tox-envs --scenario-name default
-```
-
-Filter tox-ansible environments for one scenario:
-
-```bash
-python3 scripts/generate_tox_ansible_matrix.py filter-tox-envs --scenario-name default
-```
-
-Generate a temporary `pyproject.toml` dependency file for tox:
-
-```bash
+python3 scripts/generate_tox_matrix.py filter-tox-envs --scenario-name docker-debian-13
+python3 scripts/generate_tox_ansible_matrix.py filter-tox-envs --scenario-name docker-debian-13
 pixi run -e default python scripts/generate_tox_deps.py --pyproject-output tox/py312/pyproject.toml
 ```
 
 Generated `pyproject.toml` and `galaxy.yml` files are test artifacts and should
 not be edited manually.
 
-## Adapting This Skeleton For A Real Role
-
-Before using this skeleton as a real role, update:
-
-- `meta/main.yml`: set `author`, `role_name`, `description`, `license`, and
-  supported platforms.
-- Molecule `converge.yml` files: replace
-  `codex_with_openspec.cloudflare_configured` with the final role name.
-- `defaults/main.yml`, `tasks/main.yml`, `handlers/main.yml`, and
-  `vars/main.yml`: add the actual role behavior.
-- `tests/`: add inventory and integration tests that match the role.
-- `pixi.toml`: remove unsupported Python or Ansible versions if the role does
-  not need the full compatibility matrix.
-
-## Role Variables
-
-This skeleton currently defines no role variables. `defaults/main.yml` and
-`vars/main.yml` are placeholders for the real role implementation.
-
-## Dependencies
-
-The role declares no Ansible Galaxy role dependencies in `meta/main.yml`.
-Testing dependencies are managed by `pixi.toml` and generated tox dependency
-groups.
-
-## Notes
-
-Molecule role-name validation is intentionally relaxed with
-`role_name_check: 1` in the scenario files. See `molecule/README.md` for the
-details and compatibility notes for older `ansible-compat` versions.
-
-The Molecule cache and Ansible home directories are isolated per Ansible Core
-version under `molecule/core*/.cache` and `molecule/core*/.ansible`.
-
 ## License
 
-Update `meta/main.yml` and this section with the license used by the final
-role.
+Apache-2.0

@@ -1,0 +1,27 @@
+---
+- name: Converge | any version
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: codex_with_openspec.cloudflare_configured
+      vars:
+        cloudflared_package_version: any
+  tasks:
+    - name: any version | assert
+      ansible.builtin.assert:
+        that:
+          - cloudflared_facts_redhat_support_tier == 'direct'
+          - cloudflared_facts_redhat_distribution_is_supported == true
+          - cloudflared_facts_redhat_package_manager == 'dnf'
+          - cloudflared_facts_version_mode == 'any'
+          - cloudflared_facts_is_installed == true
+          - cloudflared_facts_installed_version != ''
+          - cloudflared_facts_redhat_install_required == false
+          - cloudflared_tasks_redhat_source == 'repository'
+          - cloudflared_facts_redhat_package_spec is not defined
+          - cloudflared_facts_redhat_package_state is not defined
+          - cloudflared_facts_github_release_tag is not defined
+          - cloudflared_facts_github_release_asset is not defined
+          - cloudflared_facts_github_release_url is not defined
+          - cloudflared_result_github_download_dir is not defined
+          - cloudflared_result_github_package_download is not defined
